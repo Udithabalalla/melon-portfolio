@@ -92,6 +92,14 @@ export function Navbar() {
     return () => { document.body.style.overflow = ""; };
   }, [menuOpen]);
 
+  // Close on Escape
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenuOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
   // Animate drawer in/out
   useEffect(() => {
     const drawer = drawerRef.current;
@@ -129,7 +137,7 @@ export function Navbar() {
     <>
       <header
         data-nav
-        className="fixed inset-x-0 top-0 z-50 will-change-transform"
+        className="fixed inset-x-0 top-0 z-[60] will-change-transform"
         style={{ opacity: 0 }}
       >
         <div
@@ -194,7 +202,7 @@ export function Navbar() {
       {/* Mobile drawer */}
       <div
         ref={drawerRef}
-        className="fixed right-0 top-0 z-50 h-full w-72 max-w-[80vw] border-l border-line bg-bg/95 backdrop-blur-xl md:hidden"
+        className="fixed right-0 top-0 z-50 h-full w-72 max-w-[80vw] border-l border-line bg-ink/95 backdrop-blur-xl md:hidden"
         style={{ transform: "translateX(100%)", opacity: 0 }}
         aria-hidden={!menuOpen}
       >

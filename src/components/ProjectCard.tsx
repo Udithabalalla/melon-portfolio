@@ -69,19 +69,32 @@ export function ProjectCard({ project, index }: { project: Project; index: numbe
         className="relative aspect-[16/10] w-full overflow-hidden rounded-3xl md:aspect-[16/8]"
         style={{ clipPath: "inset(12% 8% round 24px)" }}
       >
-        {/* placeholder cover — swap for a real <img> later */}
+        {/* Real cover image when provided, otherwise a gradient placeholder. */}
         <div
           data-cover-inner
           className="absolute inset-0 scale-110"
-          style={{
-            background: `linear-gradient(135deg, ${project.cover.from}, ${project.cover.to})`,
-          }}
+          style={
+            project.coverImage
+              ? undefined
+              : {
+                  background: `linear-gradient(135deg, ${project.cover.from}, ${project.cover.to})`,
+                }
+          }
         >
-          <div className="flex h-full w-full items-center justify-center">
-            <span className="font-display text-[clamp(2rem,7vw,6rem)] font-semibold text-black/85">
-              {project.cover.text}
-            </span>
-          </div>
+          {project.coverImage ? (
+            <img
+              src={project.coverImage}
+              alt={project.cover.text}
+              loading="lazy"
+              className="h-full w-full object-cover object-top"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <span className="font-display text-[clamp(2rem,7vw,6rem)] font-semibold text-black/85">
+                {project.cover.text}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* hover tools chip row */}

@@ -28,3 +28,6 @@ Thumbs.db
 *.tsbuildinfo
 
 .vercel
+
+# Raw design source images (deployable copies live in public/)
+dc/

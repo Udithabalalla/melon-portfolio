@@ -95,15 +95,27 @@ export function ProjectDetail() {
             <div
               data-detail-cover-inner
               className="absolute inset-0 scale-110"
-              style={{
-                background: `linear-gradient(135deg, ${project.cover.from}, ${project.cover.to})`,
-              }}
+              style={
+                project.coverImage
+                  ? undefined
+                  : {
+                      background: `linear-gradient(135deg, ${project.cover.from}, ${project.cover.to})`,
+                    }
+              }
             >
-              <div className="flex h-full w-full items-center justify-center">
-                <span className="font-display text-[clamp(2rem,6vw,5rem)] font-semibold text-black/85">
-                  {project.cover.text}
-                </span>
-              </div>
+              {project.coverImage ? (
+                <img
+                  src={project.coverImage}
+                  alt={project.cover.text}
+                  className="h-full w-full object-cover object-top"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+                  <span className="font-display text-[clamp(2rem,6vw,5rem)] font-semibold text-black/85">
+                    {project.cover.text}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </Reveal>
@@ -148,13 +160,25 @@ export function ProjectDetail() {
               >
                 {section.heading}
               </Reveal>
-              <Reveal
-                as="p"
-                delay={0.08}
-                className="max-w-2xl text-lg leading-relaxed text-paper/90 md:col-span-9"
-              >
-                {section.body}
-              </Reveal>
+              <div className="md:col-span-9">
+                <Reveal
+                  as="p"
+                  delay={0.08}
+                  className="max-w-2xl text-lg leading-relaxed text-paper/90"
+                >
+                  {section.body}
+                </Reveal>
+                {section.image && (
+                  <Reveal delay={0.12} className="mt-8">
+                    <img
+                      src={section.image}
+                      alt={section.imageAlt ?? section.heading}
+                      loading="lazy"
+                      className="w-full rounded-2xl border border-line"
+                    />
+                  </Reveal>
+                )}
+              </div>
             </div>
           ))}
         </div>

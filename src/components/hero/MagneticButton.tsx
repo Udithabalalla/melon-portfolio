@@ -1,6 +1,6 @@
 import { useRef, type MouseEvent, type PointerEvent, type ReactNode } from "react";
 import { motion, useMotionValue, useSpring } from "motion/react";
-import { prefersReducedMotion } from "../../lib/gsap";
+import { prefersReducedMotion } from "../../lib/motion";
 
 const SPRING = { stiffness: 260, damping: 18, mass: 0.5 };
 

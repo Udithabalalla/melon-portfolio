@@ -1,30 +1,44 @@
-import { useLayoutEffect, useRef } from "react";
-import { gsap, prefersReducedMotion } from "../../lib/gsap";
+import { useRef } from "react";
+import {
+  motion,
+  useAnimationFrame,
+  useMotionValue,
+  useScroll,
+  useSpring,
+  useTransform,
+  useVelocity,
+} from "motion/react";
+import { wrap } from "motion";
+import { prefersReducedMotion } from "../../lib/motion";
 
 type MarqueeProps = {
   items: string[];
   className?: string;
-  speed?: number; // seconds per loop
+  speed?: number; // seconds per loop at rest
 };
 
-/** An infinite horizontal marquee that also nudges with scroll velocity. */
+/**
+ * An infinite marquee wired to scroll: it speeds up and leans with scroll
+ * velocity, and reverses when you scroll back up.
+ */
 export function Marquee({ items, className = "", speed = 22 }: MarqueeProps) {
-  const trackRef = useRef<HTMLDivElement>(null);
+  const baseX = useMotionValue(0);
+  const { scrollY } = useScroll();
+  const velocity = useSpring(useVelocity(scrollY), { damping: 50, stiffness: 400 });
+  const boost = useTransform(velocity, [0, 1000], [0, 4], { clamp: false });
+  const skewX = useTransform(velocity, [-2500, 0, 2500], [7, 0, -7]);
+  const x = useTransform(baseX, (v) => `${wrap(-50, 0, v)}%`);
+  const direction = useRef(-1);
 
-  useLayoutEffect(() => {
+  useAnimationFrame((_, delta) => {
     if (prefersReducedMotion) return;
-    const track = trackRef.current;
-    if (!track) return;
-    const ctx = gsap.context(() => {
-      gsap.to(track, {
-        xPercent: -50,
-        repeat: -1,
-        duration: speed,
-        ease: "none",
-      });
-    }, track);
-    return () => ctx.revert();
-  }, [speed]);
+    let move = direction.current * (50 / speed) * (delta / 1000);
+    const b = boost.get();
+    if (b < 0) direction.current = 1;
+    else if (b > 0) direction.current = -1;
+    move += direction.current * Math.abs(move) * Math.abs(b);
+    baseX.set(baseX.get() + move);
+  });
 
   const row = (
     <div className="flex shrink-0 items-center gap-10 pr-10">
@@ -39,10 +53,10 @@ export function Marquee({ items, className = "", speed = 22 }: MarqueeProps) {
 
   return (
     <div className={`overflow-hidden ${className}`}>
-      <div ref={trackRef} className="flex w-max">
+      <motion.div style={{ x, skewX }} className="flex w-max">
         {row}
         {row}
-      </div>
+      </motion.div>
     </div>
   );
 }

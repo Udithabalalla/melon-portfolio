@@ -1,8 +1,13 @@
 import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { contact, site } from "../data/content";
+import { EASE, SPRINGS } from "../lib/motion";
+import { fieldMood } from "./field/SignalField";
 import { SplitReveal } from "./ui/SplitReveal";
 import { Reveal } from "./ui/Reveal";
 import { Magnetic } from "./ui/Magnetic";
+import { SectionIntro } from "./ui/SectionIntro";
+import { trackLens } from "./ui/lens";
 
 export function Contact() {
   const [copied, setCopied] = useState(false);
@@ -18,11 +23,10 @@ export function Contact() {
   };
 
   return (
-    <section id="contact" className="relative py-28 md:py-40">
+    // The finale: by here the field has fully crystallised — noise into signal.
+    <section id="contact" className="relative py-28 md:py-40" {...fieldMood(0.85, 1)}>
       <div className="container-wide">
-        <Reveal as="p" className="mb-8 text-xs uppercase tracking-[0.25em] text-muted">
-          ({contact.label})
-        </Reveal>
+        <SectionIntro index="05" label={contact.label} className="mb-8" />
 
         <SplitReveal
           words={contact.heading.split(" ")}
@@ -35,41 +39,75 @@ export function Contact() {
           {contact.body}
         </Reveal>
 
-        <div className="mt-14">
+        <Reveal delay={0.2} className="mt-14">
           <Magnetic>
-            <button
+            <motion.button
               onClick={copyEmail}
-              className="group inline-flex items-center gap-4 rounded-full bg-paper px-8 py-5 font-display text-lg font-medium text-ink transition-transform"
+              whileTap={{ scale: 0.97 }}
+              className="group inline-flex items-center gap-4 rounded-full bg-paper py-4 pl-8 pr-4 font-display text-lg font-medium text-ink"
             >
-              {copied ? "Copied!" : site.email}
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-ink text-paper transition-transform duration-500 ease-expo group-hover:rotate-45">
+              {/* Both labels share one grid cell; invisible copies hold the width steady. */}
+              <span className="relative grid overflow-hidden">
+                <span aria-hidden className="invisible col-start-1 row-start-1">
+                  {site.email}
+                </span>
+                <span aria-hidden className="invisible col-start-1 row-start-1">
+                  Copied to clipboard
+                </span>
+                <AnimatePresence initial={false}>
+                  <motion.span
+                    key={copied ? "copied" : "email"}
+                    initial={{ y: "100%", opacity: 0 }}
+                    animate={{ y: "0%", opacity: 1 }}
+                    exit={{ y: "-100%", opacity: 0 }}
+                    transition={SPRINGS.snappy}
+                    className="col-start-1 row-start-1"
+                  >
+                    {copied ? "Copied to clipboard" : site.email}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-ink text-paper transition-transform duration-500 ease-expo group-hover:rotate-45">
                 ↗
               </span>
-            </button>
+            </motion.button>
           </Magnetic>
-        </div>
+        </Reveal>
 
-        <div className="mt-20 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-4">
-          {contact.socials.map((s, i) => (
-            <Reveal key={s.label} delay={i * 0.06}>
-              <a
-                href={s.href}
-                target="_blank"
-                rel="noreferrer"
-                className="flex h-full flex-col justify-between gap-8 bg-ink p-6 transition-colors duration-300 hover:bg-surface"
-              >
-                <span className="text-xs uppercase tracking-[0.2em] text-muted">
-                  {s.label}
+        <motion.div
+          className="mt-20 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-4"
+          initial="hidden"
+          whileInView="show"
+          viewport={{ margin: "0px 0px -10% 0px" }}
+          variants={{ show: { transition: { staggerChildren: 0.07 } } }}
+        >
+          {contact.socials.map((s) => (
+            <motion.a
+              key={s.label}
+              href={s.href}
+              target="_blank"
+              rel="noreferrer"
+              onPointerMove={trackLens}
+              variants={{
+                hidden: { opacity: 0, y: 24 },
+                show: { opacity: 1, y: 0, transition: { duration: 0.9, ease: EASE } },
+              }}
+              className="lens-surface group/social flex h-full flex-col justify-between gap-8 bg-ink p-6"
+            >
+              <span className="flex items-center justify-between text-xs uppercase tracking-[0.2em] text-muted">
+                {s.label}
+                <span className="translate-y-1 opacity-0 transition-all duration-500 ease-expo group-hover/social:translate-y-0 group-hover/social:opacity-100">
+                  ↗
                 </span>
-                <span className="text-sm text-paper/90">{s.handle}</span>
-              </a>
-            </Reveal>
+              </span>
+              <span className="text-sm text-paper/90">{s.handle}</span>
+            </motion.a>
           ))}
-        </div>
+        </motion.div>
 
         <Reveal
           as="p"
-          delay={0.3}
+          delay={0.2}
           className="mx-auto mt-20 max-w-2xl text-balance text-center font-serif text-2xl italic text-muted md:text-3xl"
         >
           "{contact.quote}"

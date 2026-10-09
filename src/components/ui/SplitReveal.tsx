@@ -1,78 +1,68 @@
-import { useLayoutEffect, useRef, type ElementType } from "react";
-import { gsap } from "../../lib/gsap";
+import { Fragment } from "react";
+import { motion, type Variants } from "motion/react";
+import { SPRINGS } from "../../lib/motion";
+
+type Tag = "h1" | "h2" | "h3" | "p" | "div";
 
 type SplitRevealProps = {
   words: string[];
-  as?: ElementType;
+  as?: Tag;
   className?: string;
   wordClassName?: string;
   delay?: number;
   stagger?: number;
   /** start the animation on load rather than on scroll */
   onLoad?: boolean;
-  /** if true, plays once and never reverses when scrolled past */
+  /** if true, plays once and never replays when scrolled past */
   once?: boolean;
 };
 
+const WORD: Variants = {
+  hidden: { y: "110%", opacity: 0, filter: "blur(8px)" },
+  show: { y: "0%", opacity: 1, filter: "blur(0px)", transition: SPRINGS.settle },
+};
+
 /**
- * Renders an array of words, each masked, then reveals them with a
- * staggered upward slide. Great for hero headlines.
+ * Renders an array of words, each masked, then brings them up into focus with
+ * a staggered spring. Used for headlines across the site.
  */
 export function SplitReveal({
   words,
-  as,
+  as = "h1",
   className = "",
   wordClassName = "",
   delay = 0,
-  stagger = 0.09,
+  stagger = 0.06,
   onLoad = false,
   once = false,
 }: SplitRevealProps) {
-  const Tag = (as ?? "h1") as ElementType;
-  const ref = useRef<HTMLElement>(null);
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const inners = el.querySelectorAll<HTMLElement>("[data-word-inner]");
-    const ctx = gsap.context(() => {
-      gsap.set(el, { autoAlpha: 1 });
-      gsap.fromTo(
-        inners,
-        { yPercent: 115 },
-        {
-          yPercent: 0,
-          duration: 1.1,
-          delay,
-          ease: "expo.out",
-          stagger,
-          scrollTrigger: onLoad
-            ? undefined
-            : {
-                trigger: el,
-                start: "top 80%",
-                toggleActions: once ? "play none none none" : "play none none reverse",
-              },
-        }
-      );
-    }, el);
-    return () => ctx.revert();
-  }, [delay, stagger, onLoad, once]);
+  const Component = motion[as];
+  const trigger = onLoad
+    ? { animate: "show" }
+    : { whileInView: "show", viewport: { once, margin: "0px 0px -20% 0px" } };
 
   return (
-    <Tag ref={ref} className={`will-reveal ${className}`}>
+    <Component
+      className={className}
+      initial="hidden"
+      variants={{ hidden: {}, show: { transition: { staggerChildren: stagger, delayChildren: delay } } }}
+      {...trigger}
+    >
       {words.map((word, i) => (
-        <span
-          key={i}
-          className="inline-block overflow-hidden align-bottom"
-          style={{ paddingBottom: "0.08em", marginBottom: "-0.08em" }}
-        >
-          <span data-word-inner className={`inline-block ${wordClassName}`}>
-            {word}
+        // The space sits outside the mask: a trailing space inside an
+        // inline-block is dropped, which would glue the words together.
+        <Fragment key={i}>
+          <span
+            className="inline-block overflow-hidden align-bottom"
+            style={{ paddingBottom: "0.08em", marginBottom: "-0.08em" }}
+          >
+            <motion.span variants={WORD} className={`inline-block ${wordClassName}`}>
+              {word}
+            </motion.span>
           </span>
-          {i < words.length - 1 && " "}
-        </span>
+          {i < words.length - 1 && " "}
+        </Fragment>
       ))}
-    </Tag>
+    </Component>
   );
 }

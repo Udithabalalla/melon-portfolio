@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, type Variants } from "motion/react";
-import { prefersReducedMotion } from "../../lib/gsap";
+import { prefersReducedMotion } from "../../lib/motion";
 
 const letter: Variants = {
   enter: { y: "105%", opacity: 0, filter: "blur(6px)" },

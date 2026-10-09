@@ -13,6 +13,8 @@
     --line-color: rgba(255, 255, 255, 0.08);
     --grain-opacity: 0.045;
     --hero-glow: rgba(91, 140, 255, 0.14);
+    --lens-dot: rgba(130, 160, 255, 0.55);
+    --lens-glow: rgba(91, 140, 255, 0.08);
   }
 
   [data-theme="light"] {
@@ -24,6 +26,8 @@
     --line-color: rgba(0, 0, 0, 0.1);
     --grain-opacity: 0.03;
     --hero-glow: rgba(79, 70, 229, 0.07);
+    --lens-dot: rgba(59, 91, 219, 0.4);
+    --lens-glow: rgba(79, 70, 229, 0.05);
   }
 
   html {
@@ -82,15 +86,37 @@
     text-wrap: balance;
   }
 
-  /* Elements animated by GSAP start hidden to avoid FOUC */
-  .will-reveal {
-    opacity: 0;
+  /* A surface that reveals the field's dotted lattice, plus a soft glow,
+     around the cursor (positions come from trackLens in ui/lens.ts). */
+  .lens-surface {
+    position: relative;
+    isolation: isolate;
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .will-reveal {
-    opacity: 1 !important;
-    transform: none !important;
+  .lens-surface::before,
+  .lens-surface::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .lens-surface::before {
+    background-image: radial-gradient(circle, var(--lens-dot) 1px, transparent 1.5px);
+    background-size: 14px 14px;
+    background-position: 7px 7px;
+    -webkit-mask-image: radial-gradient(150px circle at var(--lx, 50%) var(--ly, 50%), #000, transparent 70%);
+    mask-image: radial-gradient(150px circle at var(--lx, 50%) var(--ly, 50%), #000, transparent 70%);
+  }
+  .lens-surface::after {
+    background: radial-gradient(260px circle at var(--lx, 50%) var(--ly, 50%), var(--lens-glow), transparent 70%);
+  }
+  @media (hover: hover) {
+    .lens-surface:hover::before,
+    .lens-surface:hover::after {
+      opacity: 1;
+    }
   }
 }

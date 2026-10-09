@@ -1,8 +1,8 @@
 import { Component, type ReactNode } from "react";
 
 /**
- * Minimal error boundary. Used to isolate the hero's canvas particle field so
- * a rendering failure degrades to a static background instead of taking down
+ * Minimal error boundary. Used to isolate the site's canvas particle field so
+ * a rendering failure degrades to a plain background instead of taking down
  * the whole page.
  */
 export class ErrorBoundary extends Component<
@@ -17,7 +17,7 @@ export class ErrorBoundary extends Component<
 
   componentDidCatch(error: unknown) {
     if (import.meta.env.DEV) {
-      console.warn("Hero particle field failed, using fallback:", error);
+      console.warn("Particle field failed, using fallback:", error);
     }
   }
 

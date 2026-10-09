@@ -1,15 +1,21 @@
 import { projects } from "../data/content";
+import { fieldMood } from "./field/SignalField";
 import { ProjectCard } from "./ProjectCard";
 import { Reveal } from "./ui/Reveal";
+import { SplitReveal } from "./ui/SplitReveal";
+import { SectionIntro } from "./ui/SectionIntro";
 
 export function Projects() {
   return (
-    <section id="work" className="relative py-28 md:py-40">
+    <section id="work" className="relative py-28 md:py-40" {...fieldMood(0.38, 0.55)}>
       <div className="container-wide">
+        <SectionIntro index="04" label="Case studies" className="mb-8" />
         <div className="mb-16 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <Reveal as="h2" className="font-display text-[clamp(2.2rem,6vw,5rem)] font-medium tracking-tightest">
-            Selected Work
-          </Reveal>
+          <SplitReveal
+            words={["Selected", "Work"]}
+            as="h2"
+            className="font-display text-[clamp(2.2rem,6vw,5rem)] font-medium tracking-tightest"
+          />
           <Reveal as="p" delay={0.1} className="max-w-sm text-muted md:text-right">
             A few projects spanning product strategy, research, and end-to-end design.
           </Reveal>
@@ -17,7 +23,7 @@ export function Projects() {
 
         <div className="flex flex-col gap-24 md:gap-36">
           {projects.map((project, i) => (
-            <ProjectCard key={project.title} project={project} index={i} />
+            <ProjectCard key={project.slug} project={project} index={i} />
           ))}
         </div>
       </div>

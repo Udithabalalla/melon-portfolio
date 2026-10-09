@@ -1,15 +1,21 @@
 import { useEffect, useRef } from "react";
 import type { Theme } from "../../theme";
-import { prefersReducedMotion } from "../../lib/gsap";
+import { prefersReducedMotion } from "../../lib/motion";
 
 /**
- * "Signal from noise" — the hero's particle field (2D canvas).
+ * "Signal from noise": the site's persistent particle field, a 2D canvas fixed
+ * behind every page.
  *
- * Particles drift through a smooth flow field: the noise. Around the cursor
- * they snap onto a lattice and link into a network: the signal. When the
- * cursor moves on, that structure slowly dissolves back into the flow, leaving
- * a fading trail. A click sends a ring of order sweeping outward. With no
- * pointer (touch, or cursor elsewhere) the lens wanders on its own.
+ * Particles drift through a flow field (the noise). Around the cursor they
+ * snap onto a lattice and link into a network (the signal), then dissolve
+ * back, leaving a trail. A click sends a ring of order outward. With no
+ * pointer the lens wanders on its own.
+ *
+ * The field also carries the page's narrative. Scrolling moves you through it
+ * (three parallax depths, streaks at speed, a lattice plane drifting slowly
+ * behind), and each section sets a mood with `fieldMood()`: how present the
+ * field is, and how much of it has crystallised onto the lattice. Read top to
+ * bottom, the résumé turns noise into signal.
  */
 
 type RGB = readonly [number, number, number];
@@ -43,7 +49,7 @@ const PALETTES: Record<
 };
 
 const GRID = 28; // lattice spacing, px
-const LINK_DIST = GRID * 1.5; // links orthogonal + diagonal lattice neighbours
+const LINK_DIST = GRID * 1.5; // ignore links stretched by particles still settling
 const DENSITY = 1 / 1250; // particles per px²
 const MAX_PARTICLES = 1100;
 const RIPPLE_WIDTH = 64;
@@ -52,12 +58,25 @@ const DRIFT = 0.12; // gentle left→right current so the field never stalls
 const LENS_EDGE = 0.45; // outer fraction of the lens radius that fades to noise
 const GATHER = 1.6; // pull toward a resting lens, so its network fills in
 const GATHER_ZONE = 2.2; // …from up to this many lens radii away
+const AMBIENT_DIM = 0.4; // crystallised-by-scroll structure glows at this fraction
+const GRID_PARALLAX = 0.12; // the lattice plane scrolls at this fraction of the page
+const STREAK = 1.4; // how far scroll speed stretches the dashes
+const TELEPORT = 300; // px; larger scroll jumps (anchors, route changes) reset structure
 
 // Three depth layers: far, mid, near.
 const LAYER_WEIGHTS = [0.5, 0.32, 0.18];
 const LAYER_SPEED = [0.45, 0.75, 1.15];
 const LAYER_ALPHA = [0.45, 0.75, 1];
 const LAYER_WIDTH = [0.8, 1, 1.3];
+const LAYER_PARALLAX = [0.06, 0.14, 0.26];
+
+// Lattice neighbours to link to (each pair visited once): right, down, diagonals.
+const NEIGHBOURS = [
+  [1, 0, 1],
+  [0, 1, 1],
+  [1, 1, 0.35],
+  [1, -1, 0.35],
+] as const;
 
 type Particle = {
   x: number;
@@ -65,18 +84,28 @@ type Particle = {
   vx: number;
   vy: number;
   order: number; // 0 = noise, 1 = locked onto the lattice
+  focus: number; // how much of that order comes from the cursor/clicks (brighter)
   fade: number; // grows from 0 on spawn so new particles ease in
   layer: number;
   speed: number;
+  seed: number; // when ambient order passes this, the particle crystallises
   slot: number; // key of the lattice point it holds, or -1
-  sx: number; // that lattice point's position
-  sy: number;
+  si: number; // that lattice point's column / row
+  sj: number;
 };
 
 type Ripple = { x: number; y: number; r: number; max: number };
+type Zone = { top: number; intensity: number; order: number };
+
+/** Spread onto a section to set the field's mood while it's in view. */
+export function fieldMood(intensity: number, order: number) {
+  return { "data-field-intensity": intensity, "data-field-order": order };
+}
+
+const DEFAULT_MOOD = { intensity: 0.5, order: 0.2 };
 
 // Lattice points are slots holding at most one particle each.
-const slotKey = (i: number, j: number) => (i + 64) * 4096 + (j + 64);
+const slotKey = (i: number, j: number) => (i + 64) * 65536 + (j + 1024);
 
 const rgba = (c: RGB, a: number) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a.toFixed(3)})`;
 
@@ -103,6 +132,11 @@ function pickLayer() {
   const r = Math.random();
   return r < LAYER_WEIGHTS[0] ? 0 : r < LAYER_WEIGHTS[0] + LAYER_WEIGHTS[1] ? 1 : 2;
 }
+
+const smooth = (t: number) => {
+  const c = Math.min(1, Math.max(0, t));
+  return c * c * (3 - 2 * c);
+};
 
 export function SignalField({
   className = "",
@@ -146,14 +180,45 @@ export function SignalField({
       p.slot = -1;
     };
     const lens = { x: 0, y: 0, r: 0 };
-    let lockedCount = 0; // particles locked onto the lattice last frame
+    let lensLocked = 0; // particles locked inside the lens last frame
     const pointer = { cx: 0, cy: 0, x: 0, y: 0, px: 0, py: 0, vx: 0, vy: 0, active: false };
-    // Reading the rect every frame forces layout while Motion animates the
-    // copy, so cache it and refresh only when it can actually change.
     let rect = canvas.getBoundingClientRect();
-    const measure = () => {
-      rect = canvas.getBoundingClientRect();
+
+    // Scroll state: how far we've travelled, and how fast.
+    let lastScroll = window.scrollY;
+    let scrollVel = 0;
+    let latticeY = -lastScroll * GRID_PARALLAX;
+
+    // ── Section moods ─────────────────────────────────────────
+    // Cached page positions of every [data-field-*] section, so resolving the
+    // mood each frame needs no layout reads.
+    let zones: Zone[] = [];
+    const measureZones = () => {
+      const els = document.querySelectorAll<HTMLElement>("[data-field-intensity]");
+      zones = Array.from(els, (el) => ({
+        top: el.getBoundingClientRect().top + window.scrollY,
+        intensity: Number(el.dataset.fieldIntensity),
+        order: Number(el.dataset.fieldOrder),
+      })).sort((a, b) => a.top - b.top);
     };
+    // Blend each section into the next across a band around their boundary,
+    // so the mood is a smooth function of scroll position.
+    const moodAt = (scrollY: number) => {
+      if (!zones.length) return { ...DEFAULT_MOOD };
+      const probe = scrollY + h * 0.5;
+      const band = h * 0.4;
+      let intensity = zones[0].intensity;
+      let order = zones[0].order;
+      for (let k = 1; k < zones.length; k++) {
+        const t = (probe - (zones[k].top - band)) / (2 * band);
+        if (t <= 0) break;
+        const s = smooth(t);
+        intensity += (zones[k].intensity - zones[k - 1].intensity) * s;
+        order += (zones[k].order - zones[k - 1].order) * s;
+      }
+      return { intensity, order };
+    };
+    const mood = { ...DEFAULT_MOOD };
 
     const spawn = (): Particle => ({
       x: Math.random() * w,
@@ -161,12 +226,14 @@ export function SignalField({
       vx: 0,
       vy: 0,
       order: 0,
+      focus: 0,
       fade: 0,
       layer: pickLayer(),
       speed: 0.6 + Math.random() * 0.8,
+      seed: Math.random(),
       slot: -1,
-      sx: 0,
-      sy: 0,
+      si: 0,
+      sj: 0,
     });
 
     const idleTarget = (t: number) => ({
@@ -176,6 +243,26 @@ export function SignalField({
 
     // ── Simulation ────────────────────────────────────────────
     const step = (dt: number, t: number) => {
+      // Travel: content scrolls at 1×, the lattice at GRID_PARALLAX, and loose
+      // particles at their layer's depth.
+      const scrollY = window.scrollY;
+      let delta = scrollY - lastScroll;
+      lastScroll = scrollY;
+      const teleport = Math.abs(delta) > TELEPORT;
+      if (teleport) {
+        delta = 0;
+        for (const p of particles) release(p);
+      }
+      scrollVel += (delta / dt - scrollVel) * Math.min(1, 0.25 * dt);
+      const nextLatticeY = -scrollY * GRID_PARALLAX;
+      const latticeShift = teleport ? 0 : nextLatticeY - latticeY;
+      latticeY = nextLatticeY;
+
+      const target = moodAt(scrollY);
+      const ease = Math.min(1, 0.08 * dt);
+      mood.intensity += (target.intensity - mood.intensity) * ease;
+      mood.order += (target.order - mood.order) * ease;
+
       // Move the lens: follow the pointer, or wander when there isn't one.
       if (pointer.active) {
         pointer.x = pointer.cx - rect.left;
@@ -189,11 +276,12 @@ export function SignalField({
       pointer.px = pointer.x;
       pointer.py = pointer.y;
 
-      const target = pointer.active ? pointer : idleTarget(t);
+      const lensTarget = pointer.active ? pointer : idleTarget(t);
       const follow = pointer.active ? 0.22 : 0.025;
-      lens.x += (target.x - lens.x) * Math.min(1, follow * dt);
-      lens.y += (target.y - lens.y) * Math.min(1, follow * dt);
-      const targetR = pointer.active ? baseR : baseR * 0.85;
+      lens.x += (lensTarget.x - lens.x) * Math.min(1, follow * dt);
+      lens.y += (lensTarget.y - lens.y) * Math.min(1, follow * dt);
+      // Behind dense content the lens shrinks a little, so it stays out of the copy's way.
+      const targetR = baseR * (pointer.active ? 1 : 0.85) * (0.7 + 0.3 * mood.intensity);
       lens.r += (targetR - lens.r) * Math.min(1, 0.05 * dt);
 
       for (let i = ripples.length - 1; i >= 0; i--) {
@@ -206,45 +294,51 @@ export function SignalField({
       // Gather harder while the lens is sparse; stop once its core is full.
       const core = lens.r * 0.8;
       const capacity = ((Math.PI * core * core) / (GRID * GRID)) * 0.9;
-      const gather = GATHER * Math.max(0, 1 - lockedCount / Math.max(1, capacity));
+      const gather = GATHER * Math.max(0, 1 - lensLocked / Math.max(1, capacity));
       const zone = lens.r * GATHER_ZONE;
+      let locked = 0;
 
       for (const p of particles) {
-        // How strongly should this particle be ordered right now?
-        let want = 0;
+        if (p.slot >= 0) p.y += latticeShift;
+        else p.y -= delta * LAYER_PARALLAX[p.layer];
+
+        // How strongly should this particle be ordered right now? The cursor
+        // and clicks give "focused" order; scroll gives calmer ambient order.
+        let focused = 0;
         const dx = p.x - lens.x;
         const dy = p.y - lens.y;
         const d2 = dx * dx + dy * dy;
         let falloff = 0;
         if (d2 < r2) {
           falloff = 1 - Math.sqrt(d2) / lens.r;
-          // Fully ordered across the lens's core, with a soft outer edge.
-          const k = Math.min(1, falloff / LENS_EDGE);
-          want = k * k * (3 - 2 * k);
+          focused = smooth(falloff / LENS_EDGE); // full in the core, soft edge
         }
         for (const rp of ripples) {
           const band = Math.abs(Math.hypot(p.x - rp.x, p.y - rp.y) - rp.r);
           if (band < RIPPLE_WIDTH) {
             const s = (1 - band / RIPPLE_WIDTH) * (1 - rp.r / rp.max);
-            if (s > want) want = s;
+            if (s > focused) focused = s;
           }
         }
+        const ambient = Math.min(1, Math.max(0, (mood.order * 1.15 - p.seed) / 0.15));
+        const want = Math.max(focused, ambient);
+
         // Claim a free lattice point nearby. If they're all taken, keep
-        // drifting inward — so the lens fills solid instead of stacking up.
+        // drifting — so the lattice fills solid instead of stacking up.
         if (p.slot < 0 && want > 0.3) {
           const ci = Math.round(p.x / GRID);
-          const cj = Math.round(p.y / GRID);
+          const cj = Math.round((p.y - latticeY) / GRID);
           let bestD = Infinity;
           for (let i = ci - 1; i <= ci + 1; i++) {
             for (let j = cj - 1; j <= cj + 1; j++) {
               const key = slotKey(i, j);
               if (slots.has(key)) continue;
-              const sd = (i * GRID - p.x) ** 2 + (j * GRID - p.y) ** 2;
+              const sd = (i * GRID - p.x) ** 2 + (j * GRID + latticeY - p.y) ** 2;
               if (sd < bestD) {
                 bestD = sd;
                 p.slot = key;
-                p.sx = i * GRID;
-                p.sy = j * GRID;
+                p.si = i;
+                p.sj = j;
               }
             }
           }
@@ -253,8 +347,12 @@ export function SignalField({
         const settle = p.slot >= 0 ? want : 0;
 
         // Snap in quickly, let go slowly — that lag is the lingering trail.
-        p.order += (settle - p.order) * Math.min(1, (settle > p.order ? 0.14 : 0.022) * dt);
+        const rate = (to: number, from: number) => Math.min(1, (to > from ? 0.14 : 0.022) * dt);
+        p.order += (settle - p.order) * rate(settle, p.order);
+        const glow = p.slot >= 0 ? focused : 0;
+        p.focus += (glow - p.focus) * rate(glow, p.focus);
         if (p.slot >= 0 && p.order < 0.08 && want < 0.3) release(p);
+        if (d2 < r2 && p.order > 0.5) locked++;
 
         // Desired velocity: flow field, blended toward a spring onto the lattice.
         const a = flowAngle(p.x, p.y, t);
@@ -268,8 +366,8 @@ export function SignalField({
           uy -= (dy / d) * pull;
         }
         if (p.slot >= 0) {
-          const sx = (p.sx - p.x) * 0.2;
-          const sy = (p.sy - p.y) * 0.2;
+          const sx = (p.si * GRID - p.x) * 0.2;
+          const sy = (p.sj * GRID + latticeY - p.y) * 0.2;
           ux += (sx - ux) * p.order;
           uy += (sy - uy) * p.order;
         }
@@ -301,6 +399,7 @@ export function SignalField({
           Object.assign(p, spawn());
         }
       }
+      lensLocked = locked;
     };
 
     // ── Rendering ─────────────────────────────────────────────
@@ -309,45 +408,50 @@ export function SignalField({
     const linkBuckets: number[][] = [[], [], [], [], []];
     const latticeBuckets: number[][] = [[], [], [], []];
     const dotBuckets: number[][] = Array.from({ length: HUE_BANDS * LEVELS }, () => []);
+    // Cursor-focused order glows brighter than ambient order — but only as
+    // bright as the section allows, so the lens never shouts over body copy.
+    let focusGain = 1;
+    const brightness = (p: Particle) =>
+      p.order * (AMBIENT_DIM + (1 - AMBIENT_DIM) * p.focus * focusGain);
 
     const draw = () => {
       const pal = PALETTES[themeRef.current];
+      const presence = mood.intensity;
+      focusGain = Math.min(1, presence * 1.25);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
       ctx.lineCap = "round";
 
-      // Noise: short dashes along each particle's heading, batched per layer.
+      // Noise: short dashes along each particle's apparent heading (its own
+      // motion plus scroll travel), batched per depth layer.
       for (let layer = 0; layer < 3; layer++) {
+        const travel = scrollVel * LAYER_PARALLAX[layer] * STREAK;
         ctx.beginPath();
         for (const p of particles) {
           if (p.layer !== layer) continue;
           const vis = (1 - p.order) * p.fade;
           if (vis < 0.05) continue;
-          const v = Math.hypot(p.vx, p.vy) || 1;
-          const len = (2.5 + 4.5 * p.speed) * vis * (0.7 + layer * 0.25);
-          ctx.moveTo(p.x - (p.vx / v) * len, p.y - (p.vy / v) * len);
+          const ax = p.vx;
+          const ay = p.vy - travel;
+          const v = Math.hypot(ax, ay) || 1;
+          const len =
+            Math.min(48, (2.5 + 4.5 * p.speed) * (0.7 + layer * 0.25) + Math.abs(travel) * 2) * vis;
+          ctx.moveTo(p.x - (ax / v) * len, p.y - (ay / v) * len);
           ctx.lineTo(p.x, p.y);
         }
-        ctx.strokeStyle = rgba(pal.dust, pal.dustAlpha * LAYER_ALPHA[layer]);
+        ctx.strokeStyle = rgba(pal.dust, pal.dustAlpha * LAYER_ALPHA[layer] * presence);
         ctx.lineWidth = LAYER_WIDTH[layer];
         ctx.stroke();
       }
 
       // Signal: ordered particles, their links, and ripple rings.
-      const lit: Particle[] = [];
-      lockedCount = 0;
-      for (const p of particles) {
-        if (p.order > 0.04) lit.push(p);
-        if (p.order > 0.5) lockedCount++;
-      }
-
       if (pal.additive) ctx.globalCompositeOperation = "lighter";
 
       // The lattice itself, faintly revealed inside the lens.
       if (lens.r > 1) {
         for (const b of latticeBuckets) b.length = 0;
         const x0 = Math.ceil((lens.x - lens.r) / GRID) * GRID;
-        const y0 = Math.ceil((lens.y - lens.r) / GRID) * GRID;
+        const y0 = Math.ceil((lens.y - lens.r - latticeY) / GRID) * GRID + latticeY;
         for (let gx = x0; gx <= lens.x + lens.r; gx += GRID) {
           for (let gy = y0; gy <= lens.y + lens.r; gy += GRID) {
             const f = 1 - Math.hypot(gx - lens.x, gy - lens.y) / lens.r;
@@ -361,26 +465,25 @@ export function SignalField({
           for (let k = 0; k < pts.length; k += 2) {
             ctx.rect(pts[k] - size / 2, pts[k + 1] - size / 2, size, size);
           }
-          ctx.fillStyle = rgba(pal.link, 0.3 * ((bucket + 0.5) / 4));
+          ctx.fillStyle = rgba(pal.link, 0.3 * ((bucket + 0.5) / 4) * presence);
           ctx.fill();
         });
       }
 
+      // Links between neighbouring lattice slots — O(n), no pairwise search.
       for (const b of linkBuckets) b.length = 0;
-      for (let i = 0; i < lit.length; i++) {
-        const a = lit[i];
-        if (a.order < 0.3) continue;
-        for (let j = i + 1; j < lit.length; j++) {
-          const b = lit[j];
-          if (b.order < 0.3) continue;
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          if (dx > LINK_DIST || dx < -LINK_DIST || dy > LINK_DIST || dy < -LINK_DIST) continue;
+      for (const p of particles) {
+        if (p.slot < 0 || p.order < 0.3) continue;
+        const bp = brightness(p);
+        for (const [di, dj, weight] of NEIGHBOURS) {
+          const q = slots.get(slotKey(p.si + di, p.sj + dj));
+          if (!q || q.order < 0.3) continue;
+          const dx = q.x - p.x;
+          const dy = q.y - p.y;
           const d = Math.hypot(dx, dy);
           if (d > LINK_DIST || d < 2) continue;
-          const strength = Math.min(a.order, b.order) * (1 - d / LINK_DIST);
-          const bucket = Math.min(4, Math.floor(strength * 5));
-          linkBuckets[bucket].push(a.x, a.y, b.x, b.y);
+          const strength = Math.min(bp, brightness(q)) * weight;
+          linkBuckets[Math.min(4, Math.floor(strength * 5))].push(p.x, p.y, q.x, q.y);
         }
       }
       ctx.lineWidth = 0.8;
@@ -391,17 +494,20 @@ export function SignalField({
           ctx.moveTo(seg[k], seg[k + 1]);
           ctx.lineTo(seg[k + 2], seg[k + 3]);
         }
-        ctx.strokeStyle = rgba(pal.link, ((bucket + 0.5) / 5) * 0.6);
+        ctx.strokeStyle = rgba(pal.link, ((bucket + 0.5) / 5) * 0.33 * presence);
         ctx.stroke();
       });
 
-      // Hue shifts across the screen (cyan → violet); batch by hue × brightness.
+      // Dots: hue shifts across the screen (cyan → violet); batch by hue × brightness.
       for (const b of dotBuckets) b.length = 0;
-      for (const p of lit) {
+      for (const p of particles) {
+        if (p.order <= 0.04) continue;
+        const b = brightness(p);
         const hue = Math.min(HUE_BANDS - 1, Math.max(0, Math.floor((p.x / w) * HUE_BANDS)));
-        const level = Math.min(LEVELS - 1, Math.floor(p.order * LEVELS));
-        dotBuckets[hue * LEVELS + level].push(p.x, p.y, 0.7 + p.order * (1.2 + p.layer * 0.45));
+        const level = Math.min(LEVELS - 1, Math.floor(b * LEVELS));
+        dotBuckets[hue * LEVELS + level].push(p.x, p.y, 0.7 + b * (1.2 + p.layer * 0.45));
       }
+      const dotPresence = 0.25 + 0.75 * presence;
       dotBuckets.forEach((dots, i) => {
         if (!dots.length) return;
         const hue = Math.floor(i / LEVELS);
@@ -411,14 +517,15 @@ export function SignalField({
           ctx.moveTo(dots[k] + dots[k + 2], dots[k + 1]);
           ctx.arc(dots[k], dots[k + 1], dots[k + 2], 0, Math.PI * 2);
         }
-        ctx.fillStyle = rgba(mix(pal.signal, (hue + 0.5) / HUE_BANDS), Math.min(1, ((level + 1) / LEVELS) * 1.05));
+        const alpha = Math.min(1, ((level + 1) / LEVELS) * 1.05) * dotPresence;
+        ctx.fillStyle = rgba(mix(pal.signal, (hue + 0.5) / HUE_BANDS), alpha);
         ctx.fill();
       });
 
       ctx.globalCompositeOperation = "source-over";
       ctx.lineWidth = 1;
       for (const rp of ripples) {
-        ctx.strokeStyle = rgba(pal.link, 0.16 * (1 - rp.r / rp.max));
+        ctx.strokeStyle = rgba(pal.link, 0.16 * (1 - rp.r / rp.max) * presence);
         ctx.beginPath();
         ctx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
         ctx.stroke();
@@ -427,11 +534,13 @@ export function SignalField({
 
     // Reduced motion: settle the simulation off-screen, then paint one frame.
     const renderStatic = () => {
+      Object.assign(mood, moodAt(window.scrollY));
       const t = 4000;
       const spot = idleTarget(t);
       lens.x = spot.x;
       lens.y = spot.y;
       lens.r = baseR;
+      lastScroll = window.scrollY;
       for (const p of particles) p.fade = 1;
       for (let i = 0; i < 140; i++) step(1, t);
       draw();
@@ -470,16 +579,47 @@ export function SignalField({
       for (let i = count; i < particles.length; i++) release(particles[i]);
       particles.length = count;
 
-      measure();
+      rect = canvas.getBoundingClientRect();
+      measureZones();
       if (reduced) renderStatic();
     };
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(mount);
 
+    // Sections move when the page's content changes (route changes, images,
+    // fonts), so re-measure them then — coalesced to one read per frame.
+    let measurePending = 0;
+    const scheduleMeasure = () => {
+      if (measurePending) return;
+      measurePending = requestAnimationFrame(() => {
+        measurePending = 0;
+        measureZones();
+      });
+    };
+    const pageRo = new ResizeObserver(scheduleMeasure);
+    pageRo.observe(document.body);
+    const pageMo = new MutationObserver(scheduleMeasure);
+    pageMo.observe(document.body, { childList: true, subtree: true });
+
     if (reduced) {
+      // No animation, but keep the field's presence matched to the section.
+      let settle = 0;
+      const onScroll = () => {
+        window.clearTimeout(settle);
+        settle = window.setTimeout(() => {
+          Object.assign(mood, moodAt(window.scrollY));
+          draw();
+        }, 120);
+      };
+      window.addEventListener("scroll", onScroll, { passive: true });
       return () => {
+        window.clearTimeout(settle);
+        window.removeEventListener("scroll", onScroll);
+        cancelAnimationFrame(measurePending);
         ro.disconnect();
+        pageRo.disconnect();
+        pageMo.disconnect();
         canvas.remove();
       };
     }
@@ -513,7 +653,6 @@ export function SignalField({
     const onOut = (e: PointerEvent) => {
       if (!e.relatedTarget) pointer.active = false;
     };
-    window.addEventListener("scroll", measure, { passive: true });
     window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("pointerdown", onDown, { passive: true });
     window.addEventListener("pointerup", onRelease, { passive: true });
@@ -522,47 +661,45 @@ export function SignalField({
 
     // Opening beat: one wave of order rolls out from behind the headline.
     const intro = window.setTimeout(() => {
-      ripples.push({ x: w * 0.28, y: h * 0.55, r: 0, max: Math.hypot(w, h) * 0.9 });
+      if (window.scrollY < h) {
+        ripples.push({ x: w * 0.28, y: h * 0.55, r: 0, max: Math.hypot(w, h) * 0.9 });
+      }
     }, 650);
 
-    // ── Loop (paused off-screen or in a hidden tab) ───────────
+    // ── Loop (paused in a hidden tab) ─────────────────────────
     let raf = 0;
     let running = false;
-    let onscreen = true;
     let last = performance.now();
     const loop = (now: number) => {
-      const dt = Math.min(3, (now - last) / 16.667);
+      const dt = Math.max(0.05, Math.min(3, (now - last) / 16.667));
       last = now;
       step(dt, now);
       draw();
       raf = requestAnimationFrame(loop);
     };
     const sync = () => {
-      const should = onscreen && document.visibilityState === "visible";
-      if (should && !running) {
+      const visible = document.visibilityState === "visible";
+      if (visible && !running) {
         running = true;
         last = performance.now();
+        lastScroll = window.scrollY;
         raf = requestAnimationFrame(loop);
-      } else if (!should && running) {
+      } else if (!visible && running) {
         running = false;
         cancelAnimationFrame(raf);
       }
     };
-    const io = new IntersectionObserver(([entry]) => {
-      onscreen = entry.isIntersecting;
-      sync();
-    });
-    io.observe(mount);
     document.addEventListener("visibilitychange", sync);
     sync();
 
     return () => {
       cancelAnimationFrame(raf);
+      cancelAnimationFrame(measurePending);
       window.clearTimeout(intro);
-      io.disconnect();
       ro.disconnect();
+      pageRo.disconnect();
+      pageMo.disconnect();
       document.removeEventListener("visibilitychange", sync);
-      window.removeEventListener("scroll", measure);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointerup", onRelease);

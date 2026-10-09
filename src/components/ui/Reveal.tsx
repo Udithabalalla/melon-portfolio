@@ -1,9 +1,12 @@
-import { useLayoutEffect, useRef, type ReactNode, type ElementType } from "react";
-import { gsap } from "../../lib/gsap";
+import type { ReactNode } from "react";
+import { motion } from "motion/react";
+import { EASE, focusIn } from "../../lib/motion";
+
+type Tag = "div" | "p" | "span" | "h2" | "h3" | "h4" | "li";
 
 type RevealProps = {
   children: ReactNode;
-  as?: ElementType;
+  as?: Tag;
   className?: string;
   /** delay in seconds */
   delay?: number;
@@ -13,48 +16,28 @@ type RevealProps = {
 };
 
 /**
- * Fades + rises its content into view when scrolled to.
- * Uses a `.will-reveal` class so the element is hidden before GSAP runs
- * (no flash of unstyled content).
+ * Brings its content into focus — rising, fading in and un-blurring — when it
+ * scrolls into view. Replays each time it re-enters unless `once` is set.
  */
 export function Reveal({
   children,
-  as,
+  as = "div",
   className = "",
   delay = 0,
-  y = 40,
+  y = 32,
   once = false,
 }: RevealProps) {
-  const Tag = (as ?? "div") as ElementType;
-  const ref = useRef<HTMLElement>(null);
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        el,
-        { autoAlpha: 0, y },
-        {
-          autoAlpha: 1,
-          y: 0,
-          duration: 1,
-          delay,
-          ease: "expo.out",
-          scrollTrigger: {
-            trigger: el,
-            start: "top 85%",
-            toggleActions: once ? "play none none none" : "play none none reverse",
-          },
-        }
-      );
-    }, el);
-    return () => ctx.revert();
-  }, [delay, y, once]);
-
+  const Component = motion[as];
   return (
-    <Tag ref={ref} className={`will-reveal ${className}`}>
+    <Component
+      className={className}
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once, margin: "0px 0px -15% 0px" }}
+      variants={focusIn(y)}
+      transition={{ duration: 1.1, ease: EASE, delay }}
+    >
       {children}
-    </Tag>
+    </Component>
   );
 }

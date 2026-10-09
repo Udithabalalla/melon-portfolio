@@ -1,10 +1,12 @@
-import { useLayoutEffect, useRef } from "react";
+import { useRef } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import { motion, useScroll, useTransform } from "motion/react";
 import { projects } from "../data/content";
 import { Reveal } from "../components/ui/Reveal";
 import { SplitReveal } from "../components/ui/SplitReveal";
 import { Magnetic } from "../components/ui/Magnetic";
-import { gsap, prefersReducedMotion } from "../lib/gsap";
+import { fieldMood } from "../components/field/SignalField";
+import { prefersReducedMotion } from "../lib/motion";
 
 const META_LABELS = ["Client", "Role & Contributions", "Timeline", "Tools"] as const;
 
@@ -13,26 +15,10 @@ export function ProjectDetail() {
   const index = projects.findIndex((p) => p.slug === slug);
   const project = projects[index];
 
+  // Subtle parallax on the cover as you scroll past it.
   const coverRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    if (!project || prefersReducedMotion) return;
-    const ctx = gsap.context(() => {
-      // subtle parallax on the hero cover as the page loads/scrolls
-      gsap.to("[data-detail-cover-inner]", {
-        yPercent: -10,
-        ease: "none",
-        scrollTrigger: {
-          trigger: coverRef.current,
-          start: "top top",
-          end: "bottom top",
-          scrub: true,
-        },
-      });
-    }, coverRef);
-    return () => ctx.revert();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project?.slug]);
+  const { scrollYProgress } = useScroll({ target: coverRef, offset: ["start end", "end start"] });
+  const coverY = useTransform(scrollYProgress, [0, 1], prefersReducedMotion ? ["0%", "0%"] : ["-6%", "6%"]);
 
   if (!project) return <Navigate to="/" replace />;
 
@@ -41,7 +27,7 @@ export function ProjectDetail() {
   const meta = [project.client, project.role, project.timeline, project.tools.join(", ")];
 
   return (
-    <article className="relative pb-28 pt-32 md:pb-40">
+    <article className="relative pb-28 pt-32 md:pb-40" {...fieldMood(0.45, 0.25)}>
       <div className="container-wide">
         <Reveal once>
           <Link
@@ -92,16 +78,15 @@ export function ProjectDetail() {
             ref={coverRef}
             className="relative aspect-[16/9] w-full overflow-hidden rounded-3xl md:aspect-[21/9]"
           >
-            <div
-              data-detail-cover-inner
-              className="absolute inset-0 scale-110"
-              style={
-                project.coverImage
+            <motion.div
+              className="absolute inset-0"
+              style={{
+                y: coverY,
+                scale: 1.12,
+                background: project.coverImage
                   ? undefined
-                  : {
-                      background: `linear-gradient(135deg, ${project.cover.from}, ${project.cover.to})`,
-                    }
-              }
+                  : `linear-gradient(135deg, ${project.cover.from}, ${project.cover.to})`,
+              }}
             >
               {project.coverImage ? (
                 <img
@@ -116,7 +101,7 @@ export function ProjectDetail() {
                   </span>
                 </div>
               )}
-            </div>
+            </motion.div>
           </div>
         </Reveal>
 

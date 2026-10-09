@@ -1,10 +1,12 @@
 import { useEffect } from "react";
 import Lenis from "lenis";
-import { gsap, ScrollTrigger, prefersReducedMotion } from "../lib/gsap";
+import { cancelFrame, frame } from "motion/react";
+import { prefersReducedMotion } from "../lib/motion";
 
 /**
- * Sets up Lenis smooth scrolling and drives it from GSAP's ticker so that
- * ScrollTrigger stays perfectly in sync. Returns nothing; mount once in App.
+ * Sets up Lenis smooth scrolling and drives it from Motion's frame loop, so
+ * scroll-linked animations read the scroll position in the same frame Lenis
+ * writes it (no one-frame lag or jitter). Mount once in App.
  */
 export function useSmoothScroll() {
   useEffect(() => {
@@ -16,17 +18,14 @@ export function useSmoothScroll() {
       smoothWheel: true,
     });
 
-    lenis.on("scroll", ScrollTrigger.update);
-
-    const raf = (time: number) => lenis.raf(time * 1000);
-    gsap.ticker.add(raf);
-    gsap.ticker.lagSmoothing(0);
+    const update = ({ timestamp }: { timestamp: number }) => lenis.raf(timestamp);
+    frame.update(update, true);
 
     // expose for anchor-link navigation
     (window as unknown as { __lenis?: Lenis }).__lenis = lenis;
 
     return () => {
-      gsap.ticker.remove(raf);
+      cancelFrame(update);
       lenis.destroy();
       (window as unknown as { __lenis?: Lenis }).__lenis = undefined;
     };

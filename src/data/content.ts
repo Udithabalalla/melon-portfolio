@@ -21,8 +21,10 @@ export const nav = [
 ];
 
 export const hero = {
-  // rendered word-by-word for the staggered reveal
-  headline: ["Designing", "AI", "products", "people", "actually", "understand."],
+  // rendered word-by-word for the staggered reveal…
+  headline: ["Designing", "AI", "products", "people", "actually"],
+  // …followed by a serif accent word that cycles through these.
+  rotating: ["understand.", "trust.", "enjoy."],
   intro:
     "I'm an AI Product Designer blending UX research, interface design, and front-end engineering to turn complex enterprise problems into experiences that feel effortless.",
 };

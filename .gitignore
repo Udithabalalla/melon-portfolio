@@ -31,3 +31,5 @@ Thumbs.db
 
 # Raw design source images (deployable copies live in public/)
 dc/
+
+.env*

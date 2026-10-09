@@ -3,29 +3,46 @@
 @tailwind utilities;
 
 @layer base {
+  /* One explicit colour per semantic role (never text opacity), each
+     checked against WCAG on both the background and the card surface:
+       fg (headlines)   16.2:1 both themes
+       body (copy)      9.8:1 light · 10.6:1 dark
+       muted (labels)   6.0:1 light · 6.5:1 dark
+       accent / accent-2 (teal / violet)  ≥ 6.4:1
+       line-strong (interactive boundaries)  ≥ 3.1:1
+       line (decorative dividers)  intentionally quiet
+     The theme swaps surface and ink; the design's meaning stays the same. */
   :root,
   [data-theme="dark"] {
     color-scheme: dark;
-    --bg: 5 5 5;
-    --surface: 12 12 14;
-    --fg: 244 242 238;
-    --muted: 138 138 143;
-    --line-color: rgba(255, 255, 255, 0.08);
-    --grain-opacity: 0.045;
-    --hero-glow: rgba(91, 140, 255, 0.14);
-    --lens-glow: rgba(91, 140, 255, 0.12);
+    --bg: 23 24 22; /* Ink #171816 */
+    --surface: 31 32 29;
+    --fg: 245 244 240; /* warm white */
+    --body: 201 200 194;
+    --muted: 157 156 150;
+    --line: 47 48 44;
+    --line-strong: 107 108 103;
+    --accent: 111 198 184; /* teal, lifted for dark */
+    --accent-2: 184 162 222; /* violet, lifted for dark */
+    --grain-opacity: 0.035;
+    --hero-glow: rgba(111, 198, 184, 0.07);
+    --lens-glow: rgba(245, 244, 240, 0.05);
   }
 
   [data-theme="light"] {
     color-scheme: light;
-    --bg: 249 248 245;
-    --surface: 255 255 255;
-    --fg: 16 16 18;
-    --muted: 92 92 99;
-    --line-color: rgba(0, 0, 0, 0.1);
-    --grain-opacity: 0.03;
-    --hero-glow: rgba(79, 70, 229, 0.07);
-    --lens-glow: rgba(79, 70, 229, 0.05);
+    --bg: 245 244 240; /* Paper #F5F4F0 */
+    --surface: 251 250 247;
+    --fg: 23 24 22; /* Ink #171816 */
+    --body: 61 62 58;
+    --muted: 92 93 88;
+    --line: 214 212 205;
+    --line-strong: 138 137 132;
+    --accent: 14 98 88; /* muted teal #0E6258 */
+    --accent-2: 105 74 145; /* muted violet #694A91 */
+    --grain-opacity: 0.012;
+    --hero-glow: rgba(14, 98, 88, 0.04);
+    --lens-glow: rgba(23, 24, 22, 0.035);
   }
 
   html {

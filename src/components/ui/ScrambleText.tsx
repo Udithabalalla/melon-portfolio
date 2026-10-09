@@ -90,7 +90,7 @@ export function ScrambleText({
                     {ch}
                   </span>
                   {scrambling && (
-                    <span className="absolute inset-0 flex justify-center text-cyan-400 [[data-theme=light]_&]:text-blue-600">
+                    <span className="absolute inset-0 flex justify-center text-accent">
                       {state}
                     </span>
                   )}

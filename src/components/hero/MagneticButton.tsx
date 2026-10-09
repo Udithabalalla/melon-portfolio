@@ -36,7 +36,7 @@ export function MagneticButton({
   const styles =
     variant === "primary"
       ? "bg-paper text-ink"
-      : "border border-line text-paper hover:border-paper/40";
+      : "border border-line-strong text-paper hover:border-paper";
 
   return (
     <motion.a

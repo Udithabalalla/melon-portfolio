@@ -20,6 +20,7 @@ export function Footer() {
   return (
     <motion.footer
       className="border-t border-line py-10"
+      data-quiet
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1 }}
       viewport={{ once: true }}

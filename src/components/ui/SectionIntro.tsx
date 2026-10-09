@@ -17,6 +17,7 @@ export function SectionIntro({
   return (
     <motion.div
       className={`flex items-center gap-4 text-xs uppercase tracking-[0.25em] text-muted ${className}`}
+      data-quiet
       initial="hidden"
       whileInView="show"
       viewport={{ margin: "0px 0px -10% 0px" }}
@@ -31,7 +32,7 @@ export function SectionIntro({
         {index}
       </motion.span>
       <motion.span
-        className="h-px w-12 origin-left bg-paper/30"
+        className="h-px w-12 origin-left bg-line-strong"
         variants={{
           hidden: { scaleX: 0 },
           show: { scaleX: 1, transition: { duration: 1, ease: EASE, delay: 0.15 } },

@@ -14,13 +14,13 @@ export function StoryCaption() {
   const { title, line } = STORY[chapter] ?? STORY[0];
 
   return (
-    <div className="pointer-events-none fixed bottom-6 right-6 z-[45] hidden w-72 rounded-2xl border border-line bg-ink/60 px-4 py-3 text-right backdrop-blur-md md:block lg:right-10">
+    <div className="pointer-events-none fixed bottom-6 right-6 z-[45] hidden w-72 rounded-2xl border border-line bg-surface/85 px-4 py-3 text-right backdrop-blur-md md:block lg:right-10">
       <div className="mb-3 flex justify-end gap-1.5" aria-hidden>
         {STORY.map((_, i) => (
           <span
             key={i}
             className={`h-[3px] rounded-full transition-all duration-700 ease-expo ${
-              i === chapter ? "w-6 bg-paper" : i < chapter ? "w-2 bg-paper/50" : "w-2 bg-paper/15"
+              i === chapter ? "w-6 bg-paper" : i < chapter ? "w-2 bg-muted" : "w-2 bg-line-strong/50"
             }`}
           />
         ))}
@@ -35,10 +35,10 @@ export function StoryCaption() {
         >
           <div className="text-[11px] uppercase tracking-[0.25em] text-muted">
             <span className="tabular-nums text-paper">Fig. {String(chapter + 1).padStart(2, "0")}</span>
-            <span className="mx-2 text-paper/30">—</span>
+            <span className="mx-2 text-muted">—</span>
             {title}
           </div>
-          <p className="mt-1.5 text-xs leading-relaxed text-muted/80">{line}</p>
+          <p className="mt-1.5 text-xs leading-relaxed text-body">{line}</p>
         </motion.div>
       </AnimatePresence>
     </div>

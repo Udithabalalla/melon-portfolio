@@ -45,7 +45,7 @@ export function Marquee({ items, className = "", speed = 22 }: MarqueeProps) {
       {items.map((item, i) => (
         <span key={i} className="flex items-center gap-10">
           <span>{item}</span>
-          <span className="text-muted/40">✦</span>
+          <span className="text-line-strong">✦</span>
         </span>
       ))}
     </div>

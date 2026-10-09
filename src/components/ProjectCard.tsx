@@ -103,6 +103,7 @@ export function ProjectCard({ project, index }: { project: Project; index: numbe
 
       <motion.div
         className="mt-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
+        data-quiet
         initial="hidden"
         whileInView="show"
         viewport={{ margin: "0px 0px -10% 0px" }}
@@ -121,7 +122,7 @@ export function ProjectCard({ project, index }: { project: Project; index: numbe
             transition={{ duration: 1.1, ease: EASE }}
             className="mt-2 font-display text-3xl font-medium tracking-tight md:text-5xl"
           >
-            <Link to={href} className="transition-colors duration-300 hover:text-paper/80">
+            <Link to={href} className="transition-colors duration-300 hover:text-accent">
               {project.title}
             </Link>
           </motion.h3>
@@ -131,15 +132,15 @@ export function ProjectCard({ project, index }: { project: Project; index: numbe
           transition={{ duration: 1.1, ease: EASE }}
           className="max-w-md md:text-right"
         >
-          <p className="text-muted">{project.description}</p>
-          <div className="mt-3 text-sm text-paper/80">
+          <p className="text-body">{project.description}</p>
+          <div className="mt-3 text-sm text-muted">
             {project.role} · {project.year}
           </div>
           <div className="mt-5 md:flex md:justify-end">
             <Magnetic>
               <Link to={href} className="group/link inline-flex items-center gap-2 text-sm font-medium text-paper">
                 Read More
-                <span className="grid h-6 w-6 place-items-center rounded-full border border-line transition-transform duration-500 ease-expo group-hover/link:translate-x-0.5 group-hover/link:rotate-45">
+                <span className="grid h-6 w-6 place-items-center rounded-full border border-line-strong transition-transform duration-500 ease-expo group-hover/link:translate-x-0.5 group-hover/link:rotate-45">
                   ↗
                 </span>
               </Link>

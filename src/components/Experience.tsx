@@ -22,7 +22,7 @@ function Timeline({ children, gap }: { children: ReactNode; gap: string }) {
       <motion.span
         aria-hidden
         style={{ scaleY: prefersReducedMotion ? 1 : scaleY }}
-        className="absolute bottom-0 left-0 top-0 w-px origin-top bg-gradient-to-b from-cyan-400 via-blue-500 to-violet-400"
+        className="absolute bottom-0 left-0 top-0 w-px origin-top bg-gradient-to-b from-accent to-accent-2"
       />
       {children}
     </div>
@@ -43,7 +43,7 @@ function Marker({ strong = false }: { strong?: boolean }) {
     >
       {strong && (
         <motion.span
-          className="absolute inset-0 rounded-full bg-blue-400"
+          className="absolute inset-0 rounded-full bg-accent"
           initial={{ scale: 1, opacity: 0.6 }}
           whileInView={{ scale: 3.2, opacity: 0 }}
           viewport={{ margin: "0px 0px -45% 0px" }}
@@ -68,13 +68,13 @@ export function Experience() {
         <div className="grid gap-16 lg:grid-cols-12">
           {/* Experience timeline */}
           <div className="lg:col-span-7">
-            <Reveal as="p" className="mb-6 text-xs uppercase tracking-[0.25em] text-muted">
+            <Reveal as="p" quiet className="mb-6 text-xs uppercase tracking-[0.25em] text-muted">
               Experience
             </Reveal>
 
             <Timeline gap="space-y-12">
               {experience.map((role) => (
-                <div key={role.role + role.org} className="relative">
+                <div key={role.role + role.org} className="relative" data-quiet>
                   <Marker strong />
                   <Reveal>
                     <h3 className="font-display text-2xl font-medium tracking-tight md:text-3xl">
@@ -95,7 +95,7 @@ export function Experience() {
                     {role.bullets.map((bullet) => (
                       <motion.li
                         key={bullet}
-                        className="flex gap-3 text-muted"
+                        className="flex gap-3 text-body"
                         variants={{
                           hidden: { opacity: 0, x: -12 },
                           show: { opacity: 1, x: 0, transition: { duration: 0.7, ease: EASE } },
@@ -113,13 +113,13 @@ export function Experience() {
 
           {/* Education + career interests */}
           <div className="lg:col-span-5">
-            <Reveal as="p" className="mb-6 text-xs uppercase tracking-[0.25em] text-muted">
+            <Reveal as="p" quiet className="mb-6 text-xs uppercase tracking-[0.25em] text-muted">
               Education
             </Reveal>
 
             <Timeline gap="space-y-6">
               {education.map((entry) => (
-                <div key={entry.title} className="relative">
+                <div key={entry.title} className="relative" data-quiet>
                   <Marker />
                   <Reveal y={20}>
                     <h4 className="font-display text-lg font-medium tracking-tight md:text-xl">
@@ -131,10 +131,11 @@ export function Experience() {
               ))}
             </Timeline>
 
-            <Reveal as="p" delay={0.15} className="mb-4 mt-14 text-xs uppercase tracking-[0.25em] text-muted">
+            <Reveal as="p" delay={0.15} quiet className="mb-4 mt-14 text-xs uppercase tracking-[0.25em] text-muted">
               Career Interests
             </Reveal>
             <motion.div
+              data-quiet
               className="flex flex-wrap gap-2"
               initial="hidden"
               whileInView="show"

@@ -33,7 +33,7 @@ export function Contact() {
           className="max-w-[14ch] font-display text-[clamp(2.6rem,8vw,7rem)] font-medium leading-[0.98] tracking-tightest text-balance"
         />
 
-        <Reveal as="p" delay={0.1} className="mt-8 max-w-lg text-lg text-muted">
+        <Reveal as="p" delay={0.1} quiet className="mt-8 max-w-lg text-lg text-body">
           {contact.body}
         </Reveal>
 
@@ -98,7 +98,7 @@ export function Contact() {
                   ↗
                 </span>
               </span>
-              <span className="text-sm text-paper/90">{s.handle}</span>
+              <span className="text-sm text-body">{s.handle}</span>
             </motion.a>
           ))}
         </motion.div>
@@ -106,7 +106,8 @@ export function Contact() {
         <Reveal
           as="p"
           delay={0.2}
-          className="mx-auto mt-20 max-w-2xl text-balance text-center font-serif text-2xl italic text-muted md:text-3xl"
+          quiet
+          className="mx-auto mt-20 max-w-2xl text-balance text-center font-serif text-2xl italic text-body md:text-3xl"
         >
           "{contact.quote}"
         </Reveal>

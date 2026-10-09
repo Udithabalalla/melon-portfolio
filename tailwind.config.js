@@ -5,13 +5,17 @@ export default {
     extend: {
       colors: {
         // Semantic tokens driven by CSS variables so the whole UI flips
-        // with the theme. `ink` = page background, `paper` = foreground.
+        // with the theme. `ink` = page background, `paper` = headline ink,
+        // `body` = paragraph copy, `muted` = labels and metadata.
         ink: "rgb(var(--bg) / <alpha-value>)",
         surface: "rgb(var(--surface) / <alpha-value>)",
         paper: "rgb(var(--fg) / <alpha-value>)",
+        body: "rgb(var(--body) / <alpha-value>)",
         muted: "rgb(var(--muted) / <alpha-value>)",
-        line: "var(--line-color)",
-        accent: "#e8e6df",
+        line: "rgb(var(--line) / <alpha-value>)",
+        "line-strong": "rgb(var(--line-strong) / <alpha-value>)",
+        accent: "rgb(var(--accent) / <alpha-value>)",
+        "accent-2": "rgb(var(--accent-2) / <alpha-value>)",
       },
       fontFamily: {
         sans: ['"Inter Variable"', "Inter", "system-ui", "sans-serif"],

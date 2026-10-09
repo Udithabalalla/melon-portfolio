@@ -28,13 +28,13 @@ export function Skills() {
     <section id="skills" className="relative py-28 md:py-40" {...storyScene(2)}>
       <div className="container-wide">
         <SectionIntro index="02" label="Toolkit" className="mb-8" />
-        <div className="mb-16 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <div className="mb-16 flex flex-col gap-6 md:flex-row md:items-end md:justify-between" data-quiet>
           <SplitReveal
             words={["Skills"]}
             as="h2"
             className="font-display text-[clamp(2.2rem,6vw,5rem)] font-medium tracking-tightest"
           />
-          <Reveal as="p" delay={0.1} className="max-w-sm text-muted md:text-right">
+          <Reveal as="p" delay={0.1} className="max-w-sm text-body md:text-right">
             A toolkit spanning research, AI, design, and the code underneath.
           </Reveal>
         </div>
@@ -55,7 +55,7 @@ export function Skills() {
               variants={card}
               style={{ transformOrigin: "50% 100%" }}
               onPointerMove={trackLens}
-              className="lens-surface rounded-2xl border border-line bg-ink/55 p-6 transition-colors duration-500 hover:border-paper/20 md:p-8"
+              className="lens-surface rounded-2xl border border-line bg-surface/90 p-6 transition-colors duration-500 hover:border-line-strong md:p-8"
             >
               <motion.h3
                 variants={focusIn(10, 6)}
@@ -68,7 +68,7 @@ export function Skills() {
                   <motion.span
                     key={item}
                     variants={pill}
-                    className="rounded-full border border-line px-3 py-1.5 text-sm text-muted transition-colors duration-300 hover:border-paper/30 hover:text-paper"
+                    className="rounded-full border border-line px-3 py-1.5 text-sm text-muted transition-colors duration-300 hover:border-line-strong hover:text-paper"
                   >
                     {item}
                   </motion.span>

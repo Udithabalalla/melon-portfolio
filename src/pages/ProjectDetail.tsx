@@ -33,7 +33,7 @@ export function ProjectDetail() {
           <Link
             to="/"
             state={{ scrollTo: "#work" }}
-            className="inline-flex items-center gap-2 text-sm text-muted transition-colors duration-300 hover:text-paper"
+            className="inline-flex items-center gap-2 text-sm text-muted transition-colors duration-300 hover:text-accent"
           >
             <span className="transition-transform duration-300 group-hover:-translate-x-1">
               ←
@@ -61,13 +61,13 @@ export function ProjectDetail() {
         />
 
         {/* meta grid */}
-        <div className="mt-14 grid grid-cols-2 gap-8 border-y border-line py-8 md:grid-cols-4">
+        <div className="mt-14 grid grid-cols-2 gap-8 border-y border-line py-8 md:grid-cols-4" data-quiet>
           {META_LABELS.map((label, i) => (
             <Reveal key={label} delay={i * 0.06}>
               <div className="text-xs uppercase tracking-[0.2em] text-muted">
                 {label}
               </div>
-              <div className="mt-2 text-sm text-paper/90">{meta[i]}</div>
+              <div className="mt-2 text-sm text-body">{meta[i]}</div>
             </Reveal>
           ))}
         </div>
@@ -106,7 +106,7 @@ export function ProjectDetail() {
         </Reveal>
 
         {/* overview */}
-        <div className="mt-20 grid gap-8 md:grid-cols-12">
+        <div className="mt-20 grid gap-8 md:grid-cols-12" data-quiet>
           <Reveal as="p" className="text-xs uppercase tracking-[0.25em] text-muted md:col-span-3">
             (Overview)
           </Reveal>
@@ -120,7 +120,7 @@ export function ProjectDetail() {
         </div>
 
         {/* challenge / approach / results */}
-        <div className="mt-20 grid gap-10 border-t border-line pt-14 md:grid-cols-3">
+        <div className="mt-20 grid gap-10 border-t border-line pt-14 md:grid-cols-3" data-quiet>
           {[
             { label: "Challenge", body: project.challenge },
             { label: "Approach", body: project.approach },
@@ -130,7 +130,7 @@ export function ProjectDetail() {
               <h3 className="font-display text-lg font-medium tracking-tight md:text-xl">
                 {block.label}
               </h3>
-              <p className="mt-4 text-muted">{block.body}</p>
+              <p className="mt-4 text-body">{block.body}</p>
             </Reveal>
           ))}
         </div>
@@ -138,7 +138,7 @@ export function ProjectDetail() {
         {/* deep-dive sections */}
         <div className="mt-20 space-y-16 border-t border-line pt-14 md:mt-28 md:space-y-20">
           {project.sections.map((section) => (
-            <div key={section.heading} className="grid gap-6 md:grid-cols-12">
+            <div key={section.heading} className="grid gap-6 md:grid-cols-12" data-quiet>
               <Reveal
                 as="h3"
                 className="font-display text-sm uppercase tracking-[0.2em] text-muted md:col-span-3"
@@ -149,7 +149,7 @@ export function ProjectDetail() {
                 <Reveal
                   as="p"
                   delay={0.08}
-                  className="max-w-2xl text-lg leading-relaxed text-paper/90"
+                  className="max-w-2xl text-lg leading-relaxed text-body"
                 >
                   {section.body}
                 </Reveal>
@@ -173,7 +173,7 @@ export function ProjectDetail() {
           <Magnetic className="w-full">
             <Link
               to={`/work/${prev.slug}`}
-              className="group flex w-full flex-col gap-2 rounded-2xl border border-line p-6 transition-colors duration-300 hover:border-paper/30"
+              className="group flex w-full flex-col gap-2 rounded-2xl border border-line p-6 transition-colors duration-300 hover:border-line-strong"
             >
               <span className="text-xs uppercase tracking-[0.2em] text-muted">
                 ← Previous
@@ -186,7 +186,7 @@ export function ProjectDetail() {
           <Magnetic className="w-full">
             <Link
               to={`/work/${next.slug}`}
-              className="group flex w-full flex-col gap-2 rounded-2xl border border-line p-6 text-right transition-colors duration-300 hover:border-paper/30"
+              className="group flex w-full flex-col gap-2 rounded-2xl border border-line p-6 text-right transition-colors duration-300 hover:border-line-strong"
             >
               <span className="text-xs uppercase tracking-[0.2em] text-muted">
                 Next →

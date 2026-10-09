@@ -13,13 +13,13 @@ export function About() {
     <section id="about" className="relative py-28 md:py-40" {...storyScene(1)}>
       <Marquee
         items={about.capabilities}
-        className="mb-24 border-y border-line py-5 font-display text-2xl text-muted/80 md:text-4xl"
+        className="mb-24 border-y border-line py-5 font-display text-2xl text-muted md:text-4xl"
       />
 
       <div className="container-wide grid gap-12 md:grid-cols-12">
         <SectionIntro index="01" label={about.label} className="md:col-span-3 md:self-start" />
 
-        <div className="md:col-span-9">
+        <div className="md:col-span-9" data-quiet>
           <ScrollWords
             text={about.body}
             className="max-w-4xl font-display text-2xl font-light leading-[1.25] tracking-tight text-paper text-balance md:text-4xl"

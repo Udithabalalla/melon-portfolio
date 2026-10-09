@@ -16,7 +16,7 @@ function ThemeToggle() {
       whileTap={{ scale: 0.9 }}
       aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
       title={`Switch to ${isDark ? "light" : "dark"} mode`}
-      className="grid h-9 w-9 place-items-center rounded-full border border-line bg-surface/60 text-paper backdrop-blur-md transition-colors duration-300 hover:bg-surface"
+      className="grid h-9 w-9 place-items-center rounded-full border border-line-strong bg-surface/60 text-paper backdrop-blur-md transition-colors duration-300 hover:bg-surface"
     >
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.span
@@ -58,13 +58,14 @@ export function Navbar() {
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          if (entry.isIntersecting) setActive(`#${entry.target.id}`);
+          // Back in the hero, nothing in the nav is current.
+          if (entry.isIntersecting) setActive(entry.target.id === "top" ? "" : `#${entry.target.id}`);
         }
       },
       { rootMargin: "-45% 0px -55% 0px" }
     );
-    for (const item of nav) {
-      const el = document.querySelector(item.href);
+    for (const href of ["#top", ...nav.map((item) => item.href)]) {
+      const el = document.querySelector(href);
       if (el) observer.observe(el);
     }
     return () => observer.disconnect();
@@ -166,7 +167,7 @@ export function Navbar() {
             <button
               onClick={() => setMenuOpen((o) => !o)}
               aria-label={menuOpen ? "Close menu" : "Open menu"}
-              className="grid h-9 w-9 place-items-center rounded-full border border-line bg-surface/60 text-paper backdrop-blur-md transition-colors duration-300 hover:bg-surface"
+              className="grid h-9 w-9 place-items-center rounded-full border border-line-strong bg-surface/60 text-paper backdrop-blur-md transition-colors duration-300 hover:bg-surface"
             >
               {menuOpen ? <FiX className="h-4 w-4" /> : <FiMenu className="h-4 w-4" />}
             </button>

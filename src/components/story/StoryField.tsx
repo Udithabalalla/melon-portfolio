@@ -51,20 +51,44 @@ const forViewport = (s: Scene, narrow: boolean): Scene =>
     ? { ...s, x: 0, y: s.y * 0.5, scale: s.scale * 0.85, presence: s.presence * 0.55, ...s.mobile }
     : s;
 
-const PALETTES: Record<Theme, { colors: number[][]; highlight: number[]; additive: boolean; alpha: number }> = {
+// The theme changes the ink, not the meaning: in both themes most particles
+// are neutral ink, a minority carry the two accents, and pulses are teal.
+// Light mode is quieter: fewer, finer, crisper, lower-opacity marks on paper.
+type Palette = {
+  colors: number[][]; // ink, teal, violet
+  highlight: number[]; // pulses and clicks
+  additive: boolean;
+  alpha: number;
+  size: number; // point size multiplier
+  crisp: number; // 0 = soft glow, 1 = crisp dot
+  density: number; // share of particles drawn
+  quietFloor: number; // opacity left behind text blocks
+};
+const PALETTES: Record<Theme, Palette> = {
   dark: {
-    colors: [[0.13, 0.83, 0.93], [0.36, 0.55, 1], [0.65, 0.55, 0.98]],
-    highlight: [1, 1, 1],
+    colors: [[0.96, 0.957, 0.94], [0.435, 0.776, 0.722], [0.722, 0.635, 0.871]],
+    highlight: [0.435, 0.776, 0.722],
     additive: true,
-    alpha: 1,
+    alpha: 0.8,
+    size: 1,
+    crisp: 0,
+    density: 1,
+    quietFloor: 0.08,
   },
   light: {
-    colors: [[0.05, 0.45, 0.56], [0.23, 0.36, 0.86], [0.49, 0.23, 0.93]],
-    highlight: [0.07, 0.07, 0.16],
+    colors: [[0.09, 0.094, 0.086], [0.055, 0.384, 0.345], [0.412, 0.29, 0.569]],
+    highlight: [0.055, 0.384, 0.345],
     additive: false,
-    alpha: 1.6, // normal blending on paper needs more opacity to read as ink
+    alpha: 0.55,
+    size: 0.75,
+    crisp: 1,
+    density: 0.55,
+    quietFloor: 0,
   },
 };
+
+// Text blocks marked [data-quiet] clear the particles behind them.
+const MAX_QUIET = 16;
 
 const VERT = /* glsl */ `
 attribute vec4 aFrom;   // xyz + flow (position along the shape's path)
@@ -87,9 +111,24 @@ uniform vec3 uColorA;
 uniform vec3 uColorB;
 uniform vec3 uColorC;
 uniform vec3 uHighlight;
+uniform vec4 uQuiet[16];  // text blocks to keep clear: x0, y0, x1, y1
+uniform float uQuietCount;
+uniform float uQuietFloor;
 
 varying vec3 vColor;
 varying float vAlpha;
+
+// 0 inside any text block, easing to 1 just outside it.
+float quietMask(vec2 pos) {
+  float m = 1.0;
+  for (int i = 0; i < 16; i++) {
+    if (float(i) >= uQuietCount) break;
+    vec4 r = uQuiet[i];
+    vec2 out2 = max(r.xy - pos, pos - r.zw);
+    m = min(m, smoothstep(0.0, 0.07, max(out2.x, out2.y)));
+  }
+  return m;
+}
 
 vec3 drift(vec3 p, float t) {
   return vec3(
@@ -154,25 +193,28 @@ void main() {
   float spark = step(0.985, aRand.y);
   gl_PointSize = uPointSize * depth * (0.6 + aRand.z * 0.9) * (1.0 + pulse * 0.9 + ring * 0.8 + spark * 0.6);
 
-  vec3 col = aRand.w < 0.5
-    ? mix(uColorA, uColorB, aRand.w * 2.0)
-    : mix(uColorB, uColorC, aRand.w * 2.0 - 1.0);
+  // Colour roles: mostly neutral ink, then teal, then violet.
+  vec3 col = aRand.w < 0.62 ? uColorA : (aRand.w < 0.82 ? uColorB : uColorC);
   vColor = mix(col, uHighlight, clamp(pulse * 0.6 + ring * 0.5 + spark * 0.5, 0.0, 1.0));
 
   float twinkle = 0.78 + 0.22 * sin(uTime * (1.0 + aRand.x * 2.0) + aRand.y * 6.2831);
   float nearness = clamp((depth - 0.8) * 1.8, 0.0, 1.0);
   vAlpha = uPresence * intro * twinkle * (0.35 + 0.65 * nearness) * (0.75 + pulse * 0.9 + ring + spark * 0.4);
+  vAlpha *= mix(uQuietFloor, 1.0, quietMask(pos));
 }
 `;
 
 const FRAG = /* glsl */ `
 precision mediump float;
+uniform float uCrisp;
 varying vec3 vColor;
 varying float vAlpha;
 void main() {
   float r = length(gl_PointCoord - 0.5);
   if (r > 0.5) discard;
-  gl_FragColor = vec4(vColor, pow(1.0 - r * 2.0, 1.6) * vAlpha);
+  float glow = pow(1.0 - r * 2.0, 1.6);
+  float disc = 1.0 - smoothstep(0.3, 0.5, r);
+  gl_FragColor = vec4(vColor, mix(glow, disc, uCrisp) * vAlpha);
 }
 `;
 
@@ -251,6 +293,10 @@ export function StoryField({ className = "", theme = "dark" }: { className?: str
       colorB: u("uColorB"),
       colorC: u("uColorC"),
       highlight: u("uHighlight"),
+      quiet: u("uQuiet"),
+      quietCount: u("uQuietCount"),
+      quietFloor: u("uQuietFloor"),
+      crisp: u("uCrisp"),
     };
 
     // ── Particles ─────────────────────────────────────────────
@@ -300,6 +346,8 @@ export function StoryField({ className = "", theme = "dark" }: { className?: str
 
     // ── Chapters from scroll ──────────────────────────────────
     let zones: Zone[] = [];
+    let quietBlocks: { left: number; top: number; right: number; bottom: number }[] = [];
+    const quietData = new Float32Array(MAX_QUIET * 4);
     let signature = "";
     let fade = 1; // dips to 0 when the page's chapters change (route change)
     const measureZones = () => {
@@ -308,6 +356,17 @@ export function StoryField({ className = "", theme = "dark" }: { className?: str
         top: el.getBoundingClientRect().top + window.scrollY,
         scene: Number(el.dataset.storyScene),
       })).sort((a, b) => a.top - b.top);
+      // Text blocks, in page coordinates, padded a little so copy breathes.
+      const pad = 18;
+      quietBlocks = Array.from(document.querySelectorAll<HTMLElement>("[data-quiet]"), (el) => {
+        const r = el.getBoundingClientRect();
+        return {
+          left: r.left - pad,
+          top: r.top + window.scrollY - pad,
+          right: r.right + pad,
+          bottom: r.bottom + window.scrollY + pad,
+        };
+      }).filter((b) => b.right > b.left && b.bottom > b.top);
       const next = zones.map((z) => z.scene).join(",");
       if (signature && next !== signature) {
         fade = 0;
@@ -398,12 +457,29 @@ export function StoryField({ className = "", theme = "dark" }: { className?: str
       gl.uniform2f(U.aspect, w / minDim, h / minDim);
       gl.uniform3f(U.pointer, pointer.x, pointer.y, pointer.strength * mix("repel"));
       gl.uniform4f(U.pulse, pulse.x, pulse.y, pulse.age, Math.max(0, 1 - pulse.age / 1.8));
-      gl.uniform1f(U.pointSize, dpr * (2.2 + minDim / 700));
+      gl.uniform1f(U.pointSize, dpr * (2.2 + minDim / 700) * pal.size);
       gl.uniform3fv(U.colorA, pal.colors[0]);
       gl.uniform3fv(U.colorB, pal.colors[1]);
       gl.uniform3fv(U.colorC, pal.colors[2]);
       gl.uniform3fv(U.highlight, pal.highlight);
-      gl.drawArrays(gl.POINTS, 0, count);
+      gl.uniform1f(U.crisp, pal.crisp);
+      gl.uniform1f(U.quietFloor, pal.quietFloor);
+
+      const scrollY = window.scrollY;
+      const visible = quietBlocks
+        .filter((b) => b.bottom - scrollY > 0 && b.top - scrollY < h)
+        .sort((a, b) => (b.right - b.left) * (b.bottom - b.top) - (a.right - a.left) * (a.bottom - a.top))
+        .slice(0, MAX_QUIET);
+      visible.forEach((b, i) => {
+        quietData[i * 4] = (b.left / w) * 2 - 1;
+        quietData[i * 4 + 1] = 1 - ((b.bottom - scrollY) / h) * 2;
+        quietData[i * 4 + 2] = (b.right / w) * 2 - 1;
+        quietData[i * 4 + 3] = 1 - ((b.top - scrollY) / h) * 2;
+      });
+      gl.uniform4fv(U.quiet, quietData);
+      gl.uniform1f(U.quietCount, visible.length);
+
+      gl.drawArrays(gl.POINTS, 0, Math.round(count * pal.density));
     };
 
     resize();

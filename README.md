@@ -108,12 +108,33 @@ challenge/approach/results, deep-dive sections, and prev/next project navigation
 - Toggle lives in the navbar; choice is saved to `localStorage` and defaults to
   the visitor's system preference. An inline script in `index.html` applies the
   theme before first paint (no flash).
-- Colors are driven by CSS variables in [`src/index.css`](src/index.css)
-  (`--bg`, `--fg`, `--muted`, …) and mapped to Tailwind tokens (`ink`, `paper`,
-  `muted`, `surface`, `line`). Change a value there and both themes update.
+- Colors are one explicit token per semantic role, defined for both themes
+  in [`src/index.css`](src/index.css) and mapped to Tailwind
+  ([`tailwind.config.js`](tailwind.config.js)). The theme swaps surface and
+  ink; it never changes the meaning of the design.
+
+  | Token | Role | Light | Dark |
+  |---|---|---|---|
+  | `ink` | page background | Paper `#F5F4F0` | Ink `#171816` |
+  | `surface` | cards, caption | `#FBFAF7` | `#1F201D` |
+  | `paper` | headlines | Ink `#171816` | warm white `#F5F4F0` |
+  | `body` | paragraphs, bullets | `#3D3E3A` | `#C9C8C2` |
+  | `muted` | labels, metadata | `#5C5D58` | `#9D9C96` |
+  | `accent` / `accent-2` | links, active states / secondary | teal `#0E6258` / violet `#694A91` | `#6FC6B8` / `#B8A2DE` |
+  | `line-strong` | interactive boundaries | `#8A8984` | `#6B6C67` |
+  | `line` | decorative dividers | `#D6D4CD` | `#2F302C` |
+
+  Every text role clears WCAG AA on both the background and the card surface
+  (body ≈ 10:1, labels ≈ 6:1, accents ≥ 6.4:1; interactive boundaries ≥ 3:1).
+  Don't tint text with opacity (`text-paper/80`); pick the role instead.
+- Buttons: dark fill with light text in light mode, light fill with dark text
+  in dark mode (`bg-paper text-ink`).
+- Text blocks marked `data-quiet` (or `<Reveal quiet>`) keep the particle field
+  clear behind them, so decoration never sits under body copy or labels.
 - The story field ([`StoryField.tsx`](src/components/story/StoryField.tsx))
-  recolours live on theme switch: **dark** = cyan→violet glow on black
-  (additive), **light** = deep teal→indigo ink on paper.
+  recolours live on theme switch with the same roles in both themes: mostly
+  neutral ink particles, a minority in teal and violet, pulses in teal. Light
+  mode is quieter: about half the particles, finer crisp dots, lower opacity.
 - ⚠️ Editing `tailwind.config.js` requires a **dev-server restart** to recompile
   the color tokens (Vite doesn't hot-reload that file).
 

@@ -36,10 +36,11 @@ const fadeUp = (delay: number) => ({
   transition: { duration: 1.1, ease: EASE, delay },
 });
 
-// Accent colours for the rotating word, one per word.
+// Colours for the rotating word, one per word: teal, violet, then ink.
+// All clear WCAG large-text contrast (≥ 6:1) on their theme's background.
 const ACCENTS = {
-  dark: ["#67e8f9", "#8fb3ff", "#c4b5fd"],
-  light: ["#0e7490", "#3b5bdb", "#7c3aed"],
+  dark: ["#6FC6B8", "#B8A2DE", "#F5F4F0"],
+  light: ["#0E6258", "#694A91", "#171816"],
 };
 
 /** Shift a layer against the cursor; bigger `depth` reads as closer. */
@@ -153,12 +154,13 @@ export function Hero() {
         <motion.div style={eyebrowDepth}>
           <motion.div
             {...fadeUp(0.1)}
+            data-quiet
             className="mb-8 flex flex-wrap items-center gap-4 text-xs uppercase tracking-[0.25em] text-muted"
           >
             <span className="h-px w-10 bg-line" />
             {site.role}
             {site.available && (
-              <span className="flex items-center gap-2 text-paper/80">
+              <span className="flex items-center gap-2 text-body">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/60" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
@@ -201,7 +203,7 @@ export function Hero() {
         </motion.div>
 
         <motion.div style={bodyDepth}>
-          <motion.p {...fadeUp(0.85)} className="mt-10 max-w-xl text-lg text-muted md:text-xl">
+          <motion.p {...fadeUp(0.85)} data-quiet className="mt-10 max-w-xl text-lg text-body md:text-xl">
             {hero.intro}
           </motion.p>
 
@@ -216,6 +218,7 @@ export function Hero() {
 
           <motion.div
             {...fadeUp(1.3)}
+            data-quiet
             className="mt-16 flex items-center gap-4 text-xs uppercase tracking-[0.2em] text-muted"
           >
             <span className="relative h-10 w-px overflow-hidden bg-line">

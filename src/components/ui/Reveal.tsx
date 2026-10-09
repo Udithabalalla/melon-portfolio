@@ -13,6 +13,8 @@ type RevealProps = {
   /** vertical travel distance in px */
   y?: number;
   once?: boolean;
+  /** keep the particle field clear behind this block (body copy, labels) */
+  quiet?: boolean;
 };
 
 /**
@@ -26,11 +28,13 @@ export function Reveal({
   delay = 0,
   y = 32,
   once = false,
+  quiet = false,
 }: RevealProps) {
   const Component = motion[as];
   return (
     <Component
       className={className}
+      data-quiet={quiet || undefined}
       initial="hidden"
       whileInView="show"
       viewport={{ once, margin: "0px 0px -15% 0px" }}

@@ -2,8 +2,8 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { contact, site } from "../data/content";
 import { EASE, SPRINGS } from "../lib/motion";
-import { fieldMood } from "./field/SignalField";
-import { SplitReveal } from "./ui/SplitReveal";
+import { storyScene } from "./story/story";
+import { ScrambleText } from "./ui/ScrambleText";
 import { Reveal } from "./ui/Reveal";
 import { Magnetic } from "./ui/Magnetic";
 import { SectionIntro } from "./ui/SectionIntro";
@@ -23,15 +23,13 @@ export function Contact() {
   };
 
   return (
-    // The finale: by here the field has fully crystallised — noise into signal.
-    <section id="contact" className="relative py-28 md:py-40" {...fieldMood(0.85, 1)}>
+    // The finale: the particles spell "hello." while the heading decodes itself.
+    <section id="contact" className="relative py-28 md:py-40" {...storyScene(5)}>
       <div className="container-wide">
         <SectionIntro index="05" label={contact.label} className="mb-8" />
 
-        <SplitReveal
-          words={contact.heading.split(" ")}
-          as="h2"
-          stagger={0.05}
+        <ScrambleText
+          text={contact.heading}
           className="max-w-[14ch] font-display text-[clamp(2.6rem,8vw,7rem)] font-medium leading-[0.98] tracking-tightest text-balance"
         />
 

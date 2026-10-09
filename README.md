@@ -1,8 +1,8 @@
 # Uditha Balalla — Portfolio
 
 A single-page portfolio for an AI Product Designer, built in React with Motion.
-The whole site is one motion piece: a particle field runs behind every page and
-resolves from noise into signal as you scroll through the résumé.
+The whole site is one motion piece: a WebGL particle system runs behind every
+page and, as you scroll, builds the story of an AI product, chapter by chapter.
 
 ## Stack
 - **Vite + React + TypeScript**
@@ -11,7 +11,7 @@ resolves from noise into signal as you scroll through the résumé.
   springs, shared-layout nav highlight, page transitions
 - **Lenis** — smooth scrolling, driven by Motion's frame loop so scroll-linked
   animations read the scroll position in the same frame
-- **Canvas 2D** — the particle field (no WebGL dependency)
+- **Raw WebGL** — the story field (~11k GPU particles, no three.js)
 - Self-hosted fonts: Space Grotesk (display), Inter (body), Instrument Serif (accents)
 
 ## Run it
@@ -36,26 +36,34 @@ the case study. See the dispatcher console project for an example.
 Navbar (with theme toggle) · Hero (interactive particle field) · About (marquee + stats) · Skills · Experience & Education · Selected Work · Contact · Footer
 
 ## The motion system: "signal from noise"
-### The particle field
-[`SignalField.tsx`](src/components/field/SignalField.tsx) is one 2D canvas,
-fixed behind every page and mounted once in [`App.tsx`](src/App.tsx), so it
-carries on across sections and route changes. Particles drift through a flow
-field (the noise). Around the cursor they snap onto a lattice and link into a
-network (the signal), then dissolve back, leaving a trail. A click sends a ring
-of order outward. With no cursor (touch) the lens wanders on its own.
-- **Scrolling travels through it**: loose particles parallax at three depths,
-  the lattice plane drifts at 0.12× the page, and fast scrolling stretches the
-  particles into streaks.
-- **Each section sets a mood** by spreading `fieldMood(intensity, order)` onto
-  its root: how present the field is, and how much of it has crystallised onto
-  the lattice. Moods blend smoothly across section boundaries. They run from
-  pure noise in the hero (`1, 0`) to a fully settled grid behind Contact
-  (`0.85, 1`); behind dense copy the field and the cursor lens dim down.
-- Lattice points are slots holding one particle each, so it fills into a clean
-  grid; links come from lattice neighbours, so a fully settled screen stays
-  cheap (about 1.5 ms a frame with ~950 particles).
-- Tunables are the constants at the top of the file; colours per theme are in
-  `PALETTES` there.
+### The story field
+[`StoryField.tsx`](src/components/story/StoryField.tsx) is one WebGL particle
+system, fixed behind every page and mounted once in [`App.tsx`](src/App.tsx).
+As you scroll, the same particles take each chapter's form apart and **build
+the next one**: they assemble from the bottom up, swirl in flight and settle
+crisp. Scroll back and the form deconstructs. A caption
+([`StoryCaption.tsx`](src/components/story/StoryCaption.tsx)) names each
+chapter.
+
+| Chapter | Section | Form |
+|---|---|---|
+| 01 Noise | Hero | a turbulent nebula; the cursor stirs it |
+| 02 Intelligence | About | a neural network, with pulses flowing through it |
+| 03 Craft | Skills | a geodesic dome, built ring by ring |
+| 04 Journey | Experience | a rising double helix with a milestone per role |
+| 05 Product | Work, case studies | an exploded interface: window, layout, content, AI assistant |
+| 06 People | Contact | the word "hello." |
+
+- A section picks its chapter by spreading `storyScene(n)` onto its root
+  ([`story.ts`](src/components/story/story.ts), which also holds the chapter
+  titles and lines).
+- The forms are procedural, in [`shapes.ts`](src/components/story/shapes.ts).
+  Each point also carries a position along its shape's path, which the shader
+  turns into travelling pulses of light.
+- Where each form sits, how big and bright it is, and how it moves are the
+  `SCENES` at the top of `StoryField.tsx`, with `mobile` overrides per scene.
+- The cursor parts the particles and tilts the form; a click sends a ring of
+  light; the page opens with every particle bursting out of a single point.
 
 ### The rest of the language
 Shared timing lives in [`lib/motion.ts`](src/lib/motion.ts): one expo-out
@@ -68,8 +76,11 @@ comes into focus (rising, fading in, un-blurring), echoing the field.
 - [`ScrollWords`](src/components/ui/ScrollWords.tsx) — the About paragraph
   lights up word by word with the scroll. [`CountUp`](src/components/ui/CountUp.tsx)
   counts the stats in.
-- `.lens-surface` + [`trackLens`](src/components/ui/lens.ts) — cards that reveal
-  the field's dotted lattice under the cursor (Skills, Contact socials).
+- `.lens-surface` + [`trackLens`](src/components/ui/lens.ts) — cards with a
+  soft glow that follows the cursor (Skills, Contact socials). Skill cards swing
+  up into place like pieces being set.
+- [`ScrambleText`](src/components/ui/ScrambleText.tsx) — the Contact heading
+  decodes itself from random glyphs, as the particles spell "hello.".
 - [`Marquee`](src/components/ui/Marquee.tsx) speeds up, leans and reverses with
   scroll velocity.
 - Experience timelines draw themselves as you scroll; project covers open from
@@ -100,23 +111,23 @@ challenge/approach/results, deep-dive sections, and prev/next project navigation
 - Colors are driven by CSS variables in [`src/index.css`](src/index.css)
   (`--bg`, `--fg`, `--muted`, …) and mapped to Tailwind tokens (`ink`, `paper`,
   `muted`, `surface`, `line`). Change a value there and both themes update.
-- The particle field ([`SignalField.tsx`](src/components/field/SignalField.tsx))
+- The story field ([`StoryField.tsx`](src/components/story/StoryField.tsx))
   recolours live on theme switch: **dark** = cyan→violet glow on black
-  (additive), **light** = deep teal→indigo on paper.
+  (additive), **light** = deep teal→indigo ink on paper.
 - ⚠️ Editing `tailwind.config.js` requires a **dev-server restart** to recompile
   the color tokens (Vite doesn't hot-reload that file).
 
 ## Notes
 - Respects `prefers-reduced-motion` from one flag in `lib/motion.ts`: the
-  particle field renders one still frame (re-tinted per section), and content
-  appears without movement (`MotionConfig reducedMotion="always"` in `App.tsx`). **On Windows this follows Settings → Accessibility → Visual
+  story field shows each chapter's form as a still frame, and content appears
+  without movement (`MotionConfig reducedMotion="always"` in `App.tsx`). **On Windows this follows Settings → Accessibility → Visual
   effects → Animation effects**, so with that off you'll see the still version.
 - To preview full motion locally regardless of that setting, open the dev
   server with `?motion` (e.g. `http://localhost:5173/?motion`). This switch is
   compiled out of production builds.
-- The particle field pauses in hidden tabs, caps device pixel ratio at 2,
-  batches its draw calls, and is wrapped in an error boundary so a rendering
-  failure degrades to a plain background.
+- The story field pauses in hidden tabs, caps device pixel ratio at 2, scales
+  its particle count to the device (11k / 8k / 5k), and degrades to a plain
+  background if WebGL is unavailable or the context is lost.
 - Scroll reveals **replay** every time an element re-enters the viewport. Pass
   `once` to a `<Reveal>`/`<SplitReveal>` to play it only the first time.
 - Client-side navigation (e.g. Home → a project page → back) resets scroll to

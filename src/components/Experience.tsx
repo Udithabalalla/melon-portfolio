@@ -2,7 +2,7 @@ import { useRef, type ReactNode } from "react";
 import { motion, useScroll, useSpring } from "motion/react";
 import { careerInterests, education, experience } from "../data/content";
 import { EASE, SPRINGS, prefersReducedMotion } from "../lib/motion";
-import { fieldMood } from "./field/SignalField";
+import { storyScene } from "./story/story";
 import { Reveal } from "./ui/Reveal";
 import { SplitReveal } from "./ui/SplitReveal";
 import { SectionIntro } from "./ui/SectionIntro";
@@ -56,7 +56,7 @@ function Marker({ strong = false }: { strong?: boolean }) {
 
 export function Experience() {
   return (
-    <section id="experience" className="relative py-28 md:py-40" {...fieldMood(0.5, 0.38)}>
+    <section id="experience" className="relative py-28 md:py-40" {...storyScene(3)}>
       <div className="container-wide">
         <SectionIntro index="03" label="Career" className="mb-8" />
         <SplitReveal

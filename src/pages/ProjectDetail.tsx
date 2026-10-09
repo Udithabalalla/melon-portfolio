@@ -5,7 +5,7 @@ import { projects } from "../data/content";
 import { Reveal } from "../components/ui/Reveal";
 import { SplitReveal } from "../components/ui/SplitReveal";
 import { Magnetic } from "../components/ui/Magnetic";
-import { fieldMood } from "../components/field/SignalField";
+import { storyScene } from "../components/story/story";
 import { prefersReducedMotion } from "../lib/motion";
 
 const META_LABELS = ["Client", "Role & Contributions", "Timeline", "Tools"] as const;
@@ -27,7 +27,7 @@ export function ProjectDetail() {
   const meta = [project.client, project.role, project.timeline, project.tools.join(", ")];
 
   return (
-    <article className="relative pb-28 pt-32 md:pb-40" {...fieldMood(0.45, 0.25)}>
+    <article className="relative pb-28 pt-32 md:pb-40" {...storyScene(4)}>
       <div className="container-wide">
         <Reveal once>
           <Link

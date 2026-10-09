@@ -1,5 +1,5 @@
 import { projects } from "../data/content";
-import { fieldMood } from "./field/SignalField";
+import { storyScene } from "./story/story";
 import { ProjectCard } from "./ProjectCard";
 import { Reveal } from "./ui/Reveal";
 import { SplitReveal } from "./ui/SplitReveal";
@@ -7,7 +7,7 @@ import { SectionIntro } from "./ui/SectionIntro";
 
 export function Projects() {
   return (
-    <section id="work" className="relative py-28 md:py-40" {...fieldMood(0.38, 0.55)}>
+    <section id="work" className="relative py-28 md:py-40" {...storyScene(4)}>
       <div className="container-wide">
         <SectionIntro index="04" label="Case studies" className="mb-8" />
         <div className="mb-16 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">

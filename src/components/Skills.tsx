@@ -1,19 +1,21 @@
 import { motion, type Variants } from "motion/react";
 import { skills } from "../data/content";
-import { EASE, focusIn } from "../lib/motion";
-import { fieldMood } from "./field/SignalField";
+import { EASE, SPRINGS, focusIn } from "../lib/motion";
+import { storyScene } from "./story/story";
 import { Reveal } from "./ui/Reveal";
 import { SplitReveal } from "./ui/SplitReveal";
 import { SectionIntro } from "./ui/SectionIntro";
 import { trackLens } from "./ui/lens";
 
+// Cards swing up into place from their bottom edge, one after another, like
+// pieces being set — the "Craft" chapter, while the dome builds behind them.
 const card: Variants = {
-  hidden: { opacity: 0, y: 40, filter: "blur(10px)" },
+  hidden: { opacity: 0, rotateX: -72, y: 60 },
   show: {
     opacity: 1,
+    rotateX: 0,
     y: 0,
-    filter: "blur(0px)",
-    transition: { duration: 1, ease: EASE, staggerChildren: 0.035, delayChildren: 0.2 },
+    transition: { ...SPRINGS.settle, staggerChildren: 0.035, delayChildren: 0.25 },
   },
 };
 const pill: Variants = {
@@ -23,7 +25,7 @@ const pill: Variants = {
 
 export function Skills() {
   return (
-    <section id="skills" className="relative py-28 md:py-40" {...fieldMood(0.5, 0.22)}>
+    <section id="skills" className="relative py-28 md:py-40" {...storyScene(2)}>
       <div className="container-wide">
         <SectionIntro index="02" label="Toolkit" className="mb-8" />
         <div className="mb-16 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
@@ -38,18 +40,22 @@ export function Skills() {
         </div>
 
         <motion.div
-          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          // overflow-x-clip: mid-flip, a card's top edge leans toward the viewer and
+          // would otherwise widen the page on phones.
+          className="grid gap-4 overflow-x-clip sm:grid-cols-2 lg:grid-cols-3"
           initial="hidden"
           whileInView="show"
           viewport={{ margin: "0px 0px -10% 0px" }}
-          variants={{ show: { transition: { staggerChildren: 0.08 } } }}
+          style={{ perspective: 1200 }}
+          variants={{ show: { transition: { staggerChildren: 0.09 } } }}
         >
           {skills.map((group) => (
             <motion.div
               key={group.category}
               variants={card}
+              style={{ transformOrigin: "50% 100%" }}
               onPointerMove={trackLens}
-              className="lens-surface rounded-2xl border border-line bg-ink/75 p-6 transition-colors duration-500 hover:border-paper/20 md:p-8"
+              className="lens-surface rounded-2xl border border-line bg-ink/55 p-6 transition-colors duration-500 hover:border-paper/20 md:p-8"
             >
               <motion.h3
                 variants={focusIn(10, 6)}

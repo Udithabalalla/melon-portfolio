@@ -4,7 +4,8 @@ import { useSmoothScroll } from "./hooks/useSmoothScroll";
 import { useRouteScrollFix } from "./hooks/useRouteScrollFix";
 import { EASE, prefersReducedMotion } from "./lib/motion";
 import { useTheme } from "./theme";
-import { SignalField } from "./components/field/SignalField";
+import { StoryField } from "./components/story/StoryField";
+import { StoryCaption } from "./components/story/StoryCaption";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { Navbar } from "./components/Navbar";
 import { ScrollProgress } from "./components/ScrollProgress";
@@ -21,13 +22,15 @@ export default function App() {
   return (
     <MotionConfig reducedMotion={prefersReducedMotion ? "always" : "never"}>
       <div className="grain relative">
-        {/* One particle field behind every page, so it persists across routes.
-            100lvh keeps it from resizing as mobile browser bars show and hide. */}
+        {/* One particle field behind every page, so the story carries across
+            routes. 100lvh keeps it from resizing as mobile browser bars
+            show and hide. */}
         <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[100lvh]">
           <ErrorBoundary>
-            <SignalField className="h-full w-full" theme={theme} />
+            <StoryField className="h-full w-full" theme={theme} />
           </ErrorBoundary>
         </div>
+        <StoryCaption />
 
         <ScrollProgress />
         <Navbar />

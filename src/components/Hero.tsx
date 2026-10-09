@@ -12,7 +12,7 @@ import { hero, site } from "../data/content";
 import { useTheme } from "../theme";
 import { scrollToHash } from "../hooks/useSmoothScroll";
 import { EASE, prefersReducedMotion } from "../lib/motion";
-import { fieldMood } from "./field/SignalField";
+import { storyScene } from "./story/story";
 import { RotatingWord } from "./hero/RotatingWord";
 import { MagneticButton } from "./hero/MagneticButton";
 
@@ -111,7 +111,7 @@ export function Hero() {
     <section
       id="top"
       ref={ref}
-      {...fieldMood(1, 0)}
+      {...storyScene(0)}
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
       className="relative flex min-h-[100svh] flex-col justify-center overflow-hidden"
@@ -228,7 +228,7 @@ export function Hero() {
             Scroll to explore
             <span className="hidden h-px w-6 bg-line [@media(hover:hover)]:block" />
             <span className="hidden [@media(hover:hover)]:inline">
-              Move to bring order · click to send a pulse
+              Scroll to watch it take shape · click to send a pulse
             </span>
           </motion.div>
         </motion.div>

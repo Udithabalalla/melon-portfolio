@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
 import { about } from "../data/content";
 import { EASE } from "../lib/motion";
-import { fieldMood } from "./field/SignalField";
+import { storyScene } from "./story/story";
 import { Reveal } from "./ui/Reveal";
 import { Marquee } from "./ui/Marquee";
 import { SectionIntro } from "./ui/SectionIntro";
@@ -10,7 +10,7 @@ import { CountUp } from "./ui/CountUp";
 
 export function About() {
   return (
-    <section id="about" className="relative py-28 md:py-40" {...fieldMood(0.55, 0.08)}>
+    <section id="about" className="relative py-28 md:py-40" {...storyScene(1)}>
       <Marquee
         items={about.capabilities}
         className="mb-24 border-y border-line py-5 font-display text-2xl text-muted/80 md:text-4xl"
